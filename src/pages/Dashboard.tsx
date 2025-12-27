@@ -10,7 +10,7 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="page-header">
-        <h1 className="page-title">Dashboard UPDATED AND UPDATED AGAIN</h1>
+        <h1 className="page-title">Dashboard UPDATED AND UPDATED AGAIN 4:24</h1>
         <p className="page-description">
           Overview of your warehouse operations and inventory status
         </p>
