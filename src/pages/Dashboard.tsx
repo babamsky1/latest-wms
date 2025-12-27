@@ -1,16 +1,16 @@
-import { Package, Boxes, AlertTriangle, TrendingDown, TruckIcon, PackageMinus } from "lucide-react";
+import { InventoryByCategory } from "@/components/dashboard/InventoryByCategory";
+import { LowStockTable } from "@/components/dashboard/LowStockTable";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
-import { InventoryByCategory } from "@/components/dashboard/InventoryByCategory";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { LowStockTable } from "@/components/dashboard/LowStockTable";
+import { AlertTriangle, Boxes, Package, PackageMinus, TrendingDown, TruckIcon } from "lucide-react";
 
 const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="page-header">
-        <h1 className="page-title">Dashboard</h1>
+        <h1 className="page-title">Dashboard UPDATED</h1>
         <p className="page-description">
           Overview of your warehouse operations and inventory status
         </p>
