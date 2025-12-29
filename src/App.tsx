@@ -1,14 +1,12 @@
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
+import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,9 +24,9 @@ const App = () => (
           {/* Protected Routes with Layout */}
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/products" element={<Products />} />
+            <Route path="/products" element={<Dashboard />} />
             <Route path="/categories" element={<Dashboard />} />
-            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/inventory" element={<Dashboard />} />
             <Route path="/stock-in" element={<Dashboard />} />
             <Route path="/stock-out" element={<Dashboard />} />
             <Route path="/transfers" element={<Dashboard />} />
@@ -39,9 +37,9 @@ const App = () => (
             <Route path="/returns" element={<Dashboard />} />
             <Route path="/orders" element={<Dashboard />} />
             <Route path="/suppliers" element={<Dashboard />} />
-            <Route path="/reports/inventory" element={<Dashboard />} />
-            <Route path="/reports/movements" element={<Dashboard />} />
-            <Route path="/reports/low-stock" element={<Dashboard />} />
+            <Route path="/inventory" element={<Dashboard />} />
+            <Route path="/movements" element={<Dashboard />} />
+            <Route path="/low-stock" element={<Dashboard />} />
             <Route path="/users" element={<Dashboard />} />
             <Route path="/settings" element={<Dashboard />} />
           </Route>
