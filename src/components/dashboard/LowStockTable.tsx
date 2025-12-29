@@ -1,4 +1,5 @@
-import { AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -7,9 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface LowStockItem {
   id: string;
@@ -77,9 +78,11 @@ export const LowStockTable = () => {
           <AlertTriangle className="h-5 w-5 text-warning" />
           <h3 className="font-semibold text-lg">Low Stock Alerts</h3>
         </div>
-        <Button variant="outline" size="sm">
-          View All
-        </Button>
+        <Link to="/reports/low-stocks">
+          <Button variant="outline" size="sm">
+            View All
+          </Button>
+        </Link>
       </div>
       <div className="rounded-lg border border-border overflow-hidden">
         <Table>

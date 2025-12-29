@@ -1,8 +1,8 @@
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
-import { cn } from "@/lib/utils";
 
 export const MainLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

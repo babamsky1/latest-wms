@@ -1,100 +1,261 @@
-import { InventoryByCategory } from "@/components/dashboard/InventoryByCategory";
-import { LowStockTable } from "@/components/dashboard/LowStockTable";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
-import { AlertTriangle, Boxes, Package, PackageMinus, TrendingDown, TruckIcon, Warehouse, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import {
+  ArrowUpDown,
+  Filter,
+  MapPin,
+  Search,
+  Warehouse
+} from "lucide-react";
+import { useReducer } from "react";
+
+/* ================= TYPES ================= */
+
+interface InventoryItem {
+  id: string;
+  sku: string;
+  name: string;
+  warehouse: string;
+  location: string;
+  quantity: number;
+  capacity: number;
+  unit: string;
+  lastUpdated: string;
+}
+
+/* ================= DATA ================= */
+
+const inventoryItems: InventoryItem[] = [
+  {
+    id: "1",
+    sku: "WGT-A123",
+    name: "Widget A-123",
+    warehouse: "Main Warehouse",
+    location: "A-01-02-03",
+    quantity: 250,
+    capacity: 500,
+    unit: "pcs",
+    lastUpdated: "2024-01-15 14:30",
+  },
+  {
+    id: "2",
+    sku: "WGT-A123",
+    name: "Widget A-123",
+    warehouse: "Main Warehouse",
+    location: "A-01-02-04",
+    quantity: 200,
+    capacity: 500,
+    unit: "pcs",
+    lastUpdated: "2024-01-15 14:30",
+  },
+  {
+    id: "3",
+    sku: "CMP-B456",
+    name: "Component B-456",
+    warehouse: "Main Warehouse",
+    location: "B-02-01-01",
+    quantity: 28,
+    capacity: 100,
+    unit: "pcs",
+    lastUpdated: "2024-01-15 10:15",
+  },
+  {
+    id: "4",
+    sku: "RAW-C789",
+    name: "Raw Material C-789",
+    warehouse: "Secondary Warehouse",
+    location: "C-01-03-02",
+    quantity: 1200,
+    capacity: 2000,
+    unit: "kg",
+    lastUpdated: "2024-01-14 16:45",
+  },
+];
+
+/* ================= REDUCER (SAME AS CATEGORIES) ================= */
+
+type State = {
+  searchQuery: string;
+};
+
+type Action = {
+  type: "SET_SEARCH";
+  payload: string;
+};
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "SET_SEARCH":
+      return { ...state, searchQuery: action.payload };
+    default:
+      return state;
+  }
+};
+
+/* ================= COMPONENT ================= */
 
 const Overview = () => {
+  const [state, dispatch] = useReducer(reducer, {
+    searchQuery: "",
+  });
+
+  const filteredInventory = inventoryItems.filter((item) => {
+    const q = state.searchQuery.toLowerCase();
+    return (
+      item.sku.toLowerCase().includes(q) ||
+      item.name.toLowerCase().includes(q) ||
+      item.location.toLowerCase().includes(q)
+    );
+  });
+
+  const getCapacityColor = (percentage: number) => {
+    if (percentage >= 90) return "bg-destructive";
+    if (percentage >= 70) return "bg-warning";
+    return "bg-success";
+  };
+
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div className="page-header">
-        <h1 className="page-title">Overview</h1>
+        <h1 className="page-title">Inventory Overview</h1>
         <p className="page-description">
-          Quick snapshot of your warehouse operations
+          View and manage stock levels across all locations
         </p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Products"
-          value="2,847"
-          icon={Package}
-          iconColor="text-primary"
-          change={{ value: 12, type: "increase" }}
-        />
-        <StatCard
-          title="Active Warehouses"
-          value="3"
-          icon={Warehouse}
-          iconColor="text-info"
-        />
-        <StatCard
-          title="Low Stock Alerts"
-          value="23"
-          icon={AlertTriangle}
-          iconColor="text-warning"
-          change={{ value: 5, type: "decrease" }}
-        />
-        <StatCard
-          title="Active Users"
-          value="12"
-          icon={Users}
-          iconColor="text-success"
-        />
-      </div>
+      {/* Filters */}
+      <div className="content-section">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[250px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by SKU, product name, or location..."
+              value={state.searchQuery}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_SEARCH",
+                  payload: e.target.value,
+                })
+              }
+              className="pl-10"
+            />
+          </div>
 
-      {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Stock Units"
-          value="145,328"
-          icon={Boxes}
-          iconColor="text-primary"
-          change={{ value: 8, type: "increase" }}
-        />
-        <StatCard
-          title="Out of Stock"
-          value="8"
-          icon={TrendingDown}
-          iconColor="text-destructive"
-          change={{ value: 2, type: "increase" }}
-        />
-        <StatCard
-          title="Today's Inbound"
-          value="1,247"
-          icon={TruckIcon}
-          iconColor="text-success"
-          change={{ value: 18, type: "increase" }}
-        />
-        <StatCard
-          title="Today's Outbound"
-          value="892"
-          icon={PackageMinus}
-          iconColor="text-primary"
-          change={{ value: 3, type: "neutral" }}
-        />
-      </div>
+          <Select defaultValue="all">
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Warehouse" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Warehouses</SelectItem>
+              <SelectItem value="main">Main Warehouse</SelectItem>
+              <SelectItem value="secondary">Secondary Warehouse</SelectItem>
+            </SelectContent>
+          </Select>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <StockMovementChart />
-        </div>
-        <div>
-          <InventoryByCategory />
+          <Button variant="outline" size="icon">
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <LowStockTable />
-        </div>
-        <div>
-          <RecentActivity />
-        </div>
+      {/* Table */}
+      <div className="table-container">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>
+                <Button variant="ghost" size="sm" className="-ml-3 h-8">
+                  SKU
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>Product Name</TableHead>
+              <TableHead>
+                <div className="flex items-center gap-2">
+                  <Warehouse className="h-4 w-4 text-muted-foreground" />
+                  Warehouse
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  Location
+                </div>
+              </TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Capacity</TableHead>
+              <TableHead>Last Updated</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {filteredInventory.map((item) => {
+              const usage = Math.round(
+                (item.quantity / item.capacity) * 100
+              );
+
+              return (
+                <TableRow key={item.id} className="hover:bg-muted/30">
+                  <TableCell className="font-mono text-sm">
+                    {item.sku}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {item.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{item.warehouse}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                      {item.location}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-semibold">
+                      {item.quantity.toLocaleString()}
+                    </span>{" "}
+                    <span className="text-muted-foreground">
+                      {item.unit}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Progress
+                        value={usage}
+                        className={cn("h-2 w-24", getCapacityColor(usage))}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {usage}%
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {item.lastUpdated}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

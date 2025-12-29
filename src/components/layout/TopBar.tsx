@@ -1,6 +1,6 @@
-import { Bell, Search, User, ChevronDown } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Bell, ChevronDown } from "lucide-react";
 
 interface TopBarProps {
   title?: string;
@@ -21,14 +20,6 @@ export const TopBar = ({ title }: TopBarProps) => {
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6">
       <div className="flex items-center gap-4 flex-1">
         {title && <h1 className="text-xl font-semibold text-foreground">{title}</h1>}
-        
-        <div className="relative max-w-md flex-1 ml-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search products, orders, locations..."
-            className="pl-10 bg-background"
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -86,15 +77,10 @@ export const TopBar = ({ title }: TopBarProps) => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
+            <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
-              Log out
-            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

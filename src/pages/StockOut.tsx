@@ -1,6 +1,10 @@
-import { useReducer } from "react";
-import { PackageMinus, Plus, Search, Eye, CheckCircle, Clock, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -10,6 +14,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  CheckCircle,
+  Clock,
+  Edit,
+  Eye,
+  MoreHorizontal,
+  PackageMinus,
+  Plus,
+  Search,
+  Trash2,
+  Truck
+} from "lucide-react";
+import { useReducer } from "react";
 
 interface StockOutRecord {
   id: string;
@@ -28,7 +45,9 @@ type State = {
   searchQuery: string;
 };
 
-type Action = { type: "SET_SEARCH"; payload: string };
+type Action =
+  | { type: "SET_SEARCH"; payload: string }
+  | { type: "DELETE_RECORD"; payload: string };
 
 const initialRecords: StockOutRecord[] = [
   { id: "1", referenceNo: "SO-2024-001", destination: "Customer A", orderRef: "ORD-5001", itemCount: 3, totalQuantity: 150, status: "dispatched", dispatchDate: "2024-01-15", processedBy: "John Smith" },
@@ -42,6 +61,8 @@ const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "SET_SEARCH":
       return { ...state, searchQuery: action.payload };
+    case "DELETE_RECORD":
+      return { ...state, records: state.records.filter(r => r.id !== action.payload) };
     default:
       return state;
   }
@@ -69,13 +90,14 @@ const StockOut = () => {
   };
 
   const filteredRecords = state.records.filter(
-    (r) =>
+    r =>
       r.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
       r.destination.toLowerCase().includes(state.searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
@@ -89,6 +111,7 @@ const StockOut = () => {
         </div>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3">
@@ -125,6 +148,7 @@ const StockOut = () => {
         </div>
       </div>
 
+      {/* Search */}
       <div className="content-section">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -139,6 +163,7 @@ const StockOut = () => {
         </div>
       </div>
 
+      {/* Table */}
       <div className="table-container">
         <Table>
           <TableHeader>
@@ -146,8 +171,8 @@ const StockOut = () => {
               <TableHead>Reference No.</TableHead>
               <TableHead>Destination</TableHead>
               <TableHead>Order Ref</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Total Qty</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead>Total Qty</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Dispatch Date</TableHead>
               <TableHead>Processed By</TableHead>
@@ -155,20 +180,38 @@ const StockOut = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRecords.map((record) => (
+            {filteredRecords.map(record => (
               <TableRow key={record.id} className="hover:bg-muted/30">
                 <TableCell className="font-mono font-medium">{record.referenceNo}</TableCell>
                 <TableCell>{record.destination}</TableCell>
                 <TableCell className="font-mono text-sm">{record.orderRef}</TableCell>
-                <TableCell className="text-right">{record.itemCount}</TableCell>
-                <TableCell className="text-right font-semibold">{record.totalQuantity.toLocaleString()}</TableCell>
+                <TableCell>{record.itemCount}</TableCell>
+                <TableCell className="font-semibold">{record.totalQuantity.toLocaleString()}</TableCell>
                 <TableCell>{getStatusBadge(record.status)}</TableCell>
                 <TableCell className="text-muted-foreground">{record.dispatchDate}</TableCell>
                 <TableCell>{record.processedBy}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon">
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Eye className="h-4 w-4 mr-2" />View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="h-4 w-4 mr-2" />Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

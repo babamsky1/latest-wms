@@ -1,7 +1,13 @@
-import { useReducer } from "react";
-import { ArrowUpDown, Search, Filter, ArrowUp, ArrowDown, ArrowRightLeft, Minus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -10,14 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Filter, Minus, Search } from "lucide-react";
+import { useReducer } from "react";
 
 interface Movement {
   id: string;
@@ -199,7 +199,7 @@ const StockMovements = () => {
               <TableHead>SKU / Product</TableHead>
               <TableHead>From</TableHead>
               <TableHead>To</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
+              <TableHead>Quantity</TableHead>
               <TableHead>Performed By</TableHead>
             </TableRow>
           </TableHeader>
@@ -229,7 +229,7 @@ const StockMovements = () => {
                     <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <span className={`font-semibold ${movement.quantity > 0 ? "text-success" : "text-destructive"}`}>
                     {movement.quantity > 0 ? "+" : ""}{movement.quantity} {movement.unit}
                   </span>

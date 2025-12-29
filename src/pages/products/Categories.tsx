@@ -1,6 +1,11 @@
-import { useReducer } from "react";
-import { FolderTree, Plus, Search, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -10,13 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Edit, FolderTree, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { useReducer } from "react";
 
 interface Category {
   id: string;
@@ -102,7 +102,7 @@ const Categories = () => {
             <TableRow className="bg-muted/50">
               <TableHead>Category Name</TableHead>
               <TableHead>Parent Category</TableHead>
-              <TableHead className="text-right">Products</TableHead>
+              <TableHead>Products</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="w-[80px]">Actions</TableHead>
@@ -118,13 +118,15 @@ const Categories = () => {
                   </div>
                 </TableCell>
                 <TableCell>
+                  <div className="flex items-left gap-2">
                   {category.parentCategory ? (
-                    <Badge variant="outline">{category.parentCategory}</Badge>
+                    <Badge variant="default">{category.parentCategory}</Badge>
                   ) : (
                     <span className="text-muted-foreground">Root</span>
-                  )}
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell className="text-right font-semibold">{category.productCount}</TableCell>
+                <TableCell className="font-semibold">{category.productCount}</TableCell>
                 <TableCell>
                   <span className={`status-badge ${category.status === "active" ? "status-active" : "status-inactive"}`}>
                     {category.status}

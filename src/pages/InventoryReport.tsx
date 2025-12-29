@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { FileText, Download, Calendar, Filter, TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -16,7 +16,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import {
+  Calendar,
+  Download,
+  FileText,
+  Filter,
+  Package,
+  Search,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { useState } from "react";
 
 interface ReportItem {
   id: string;
@@ -32,23 +42,33 @@ interface ReportItem {
 }
 
 const reportData: ReportItem[] = [
-  { id: "1", sku: "WGT-A123", name: "Widget A-123", category: "Electronics", openingStock: 400, stockIn: 150, stockOut: 100, adjustments: 0, closingStock: 450, value: 4500.00 },
-  { id: "2", sku: "CMP-B456", name: "Component B-456", category: "Components", openingStock: 50, stockIn: 100, stockOut: 122, adjustments: 0, closingStock: 28, value: 560.00 },
-  { id: "3", sku: "RAW-C789", name: "Raw Material C-789", category: "Raw Materials", openingStock: 1000, stockIn: 500, stockOut: 300, adjustments: -50, closingStock: 1150, value: 11500.00 },
-  { id: "4", sku: "ELC-E345", name: "Electronic E-345", category: "Electronics", openingStock: 800, stockIn: 200, stockOut: 144, adjustments: 0, closingStock: 856, value: 8560.00 },
-  { id: "5", sku: "MCH-F678", name: "Machine Part F-678", category: "Machinery", openingStock: 200, stockIn: 50, stockOut: 16, adjustments: 0, closingStock: 234, value: 2340.00 },
-  { id: "6", sku: "PKG-H234", name: "Packaging H-234", category: "Packaging", openingStock: 1200, stockIn: 800, stockOut: 500, adjustments: 0, closingStock: 1500, value: 3000.00 },
+  { id: "1", sku: "WGT-A123", name: "Widget A-123", category: "Electronics", openingStock: 400, stockIn: 150, stockOut: 100, adjustments: 0, closingStock: 450, value: 4500.0 },
+  { id: "2", sku: "CMP-B456", name: "Component B-456", category: "Components", openingStock: 50, stockIn: 100, stockOut: 122, adjustments: 0, closingStock: 28, value: 560.0 },
+  { id: "3", sku: "RAW-C789", name: "Raw Material C-789", category: "Raw Materials", openingStock: 1000, stockIn: 500, stockOut: 300, adjustments: -50, closingStock: 1150, value: 11500.0 },
+  { id: "4", sku: "ELC-E345", name: "Electronic E-345", category: "Electronics", openingStock: 800, stockIn: 200, stockOut: 144, adjustments: 0, closingStock: 856, value: 8560.0 },
+  { id: "5", sku: "MCH-F678", name: "Machine Part F-678", category: "Machinery", openingStock: 200, stockIn: 50, stockOut: 16, adjustments: 0, closingStock: 234, value: 2340.0 },
+  { id: "6", sku: "PKG-H234", name: "Packaging H-234", category: "Packaging", openingStock: 1200, stockIn: 800, stockOut: 500, adjustments: 0, closingStock: 1500, value: 3000.0 },
 ];
 
 const InventoryReport = () => {
   const [reportType, setReportType] = useState("stock-summary");
   const [period, setPeriod] = useState("this-month");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const totalValue = reportData.reduce((sum, item) => sum + item.value, 0);
-  const totalItems = reportData.reduce((sum, item) => sum + item.closingStock, 0);
+  // Filtered data
+  const filteredData = reportData.filter(
+    (item) =>
+      item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0);
+  const totalItems = filteredData.reduce((sum, item) => sum + item.closingStock, 0);
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
@@ -62,6 +82,7 @@ const InventoryReport = () => {
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3">
@@ -81,7 +102,9 @@ const InventoryReport = () => {
             </div>
             <div>
               <p className="stat-label">Stock In</p>
-              <p className="stat-value">1,800</p>
+              <p className="stat-value">
+                {filteredData.reduce((sum, item) => sum + item.stockIn, 0).toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
@@ -92,7 +115,9 @@ const InventoryReport = () => {
             </div>
             <div>
               <p className="stat-label">Stock Out</p>
-              <p className="stat-value">1,182</p>
+              <p className="stat-value">
+                {filteredData.reduce((sum, item) => sum + item.stockOut, 0).toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
@@ -109,8 +134,18 @@ const InventoryReport = () => {
         </div>
       </div>
 
+      {/* Filters */}
       <div className="content-section">
         <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[250px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by SKU, name, or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           <Select value={reportType} onValueChange={setReportType}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Report Type" />
@@ -143,6 +178,7 @@ const InventoryReport = () => {
         </div>
       </div>
 
+      {/* Report Table */}
       <div className="table-container">
         <Table>
           <TableHeader>
@@ -150,41 +186,42 @@ const InventoryReport = () => {
               <TableHead>SKU</TableHead>
               <TableHead>Product Name</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead className="text-right">Opening</TableHead>
-              <TableHead className="text-right">Stock In</TableHead>
-              <TableHead className="text-right">Stock Out</TableHead>
-              <TableHead className="text-right">Adjustments</TableHead>
-              <TableHead className="text-right">Closing</TableHead>
-              <TableHead className="text-right">Value</TableHead>
+              <TableHead>Opening</TableHead>
+              <TableHead>Stock In</TableHead>
+              <TableHead>Stock Out</TableHead>
+              <TableHead>Adjustments</TableHead>
+              <TableHead>Closing</TableHead>
+              <TableHead>Value</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {reportData.map((item) => (
+            {filteredData.map((item) => (
               <TableRow key={item.id} className="hover:bg-muted/30">
                 <TableCell className="font-mono font-medium">{item.sku}</TableCell>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className="font-normal">{item.category}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{item.openingStock.toLocaleString()}</TableCell>
-                <TableCell className="text-right text-success">+{item.stockIn.toLocaleString()}</TableCell>
-                <TableCell className="text-right text-destructive">-{item.stockOut.toLocaleString()}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">{item.openingStock.toLocaleString()}</TableCell>
+                <TableCell className="text-left text-success">+{item.stockIn.toLocaleString()}</TableCell>
+                <TableCell className="text-left text-destructive">-{item.stockOut.toLocaleString()}</TableCell>
+                <TableCell className="text-left">
                   <span className={item.adjustments < 0 ? "text-destructive" : item.adjustments > 0 ? "text-success" : ""}>
                     {item.adjustments !== 0 ? (item.adjustments > 0 ? `+${item.adjustments}` : item.adjustments) : "0"}
                   </span>
                 </TableCell>
-                <TableCell className="text-right font-semibold">{item.closingStock.toLocaleString()}</TableCell>
-                <TableCell className="text-right font-semibold">${item.value.toLocaleString()}</TableCell>
+                <TableCell className="text-left font-semibold">{item.closingStock.toLocaleString()}</TableCell>
+                <TableCell className="text-left font-semibold">${item.value.toLocaleString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
 
+      {/* Footer */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing {reportData.length} items
+          Showing {filteredData.length} items
         </p>
       </div>
     </div>

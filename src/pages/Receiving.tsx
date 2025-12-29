@@ -1,6 +1,11 @@
-import { useReducer } from "react";
-import { Truck, Plus, Search, Eye, CheckCircle, Clock, Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -10,7 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Clock, Edit, Eye, MoreHorizontal, Package, Plus, Search, Trash2, Truck } from "lucide-react";
+import { useReducer } from "react";
 
 interface ReceivingRecord {
   id: string;
@@ -30,7 +36,9 @@ type State = {
   searchQuery: string;
 };
 
-type Action = { type: "SET_SEARCH"; payload: string };
+type Action =
+  | { type: "SET_SEARCH"; payload: string }
+  | { type: "DELETE_RECORD"; payload: string };
 
 const initialRecords: ReceivingRecord[] = [
   { id: "1", poNumber: "PO-2024-001", supplier: "Tech Supplies Co.", expectedDate: "2024-01-15", receivedDate: "2024-01-15", itemCount: 5, expectedQty: 500, receivedQty: 500, status: "completed", dock: "Dock A" },
@@ -44,6 +52,8 @@ const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "SET_SEARCH":
       return { ...state, searchQuery: action.payload };
+    case "DELETE_RECORD":
+      return { ...state, records: state.records.filter(r => r.id !== action.payload) };
     default:
       return state;
   }
@@ -72,13 +82,14 @@ const Receiving = () => {
   };
 
   const filteredRecords = state.records.filter(
-    (r) =>
+    r =>
       r.poNumber.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
       r.supplier.toLowerCase().includes(state.searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
@@ -92,6 +103,7 @@ const Receiving = () => {
         </div>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3">
@@ -139,6 +151,7 @@ const Receiving = () => {
         </div>
       </div>
 
+      {/* Search */}
       <div className="content-section">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -153,6 +166,7 @@ const Receiving = () => {
         </div>
       </div>
 
+      {/* Table */}
       <div className="table-container">
         <Table>
           <TableHeader>
@@ -168,7 +182,7 @@ const Receiving = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRecords.map((record) => (
+            {filteredRecords.map(record => (
               <TableRow key={record.id} className="hover:bg-muted/30">
                 <TableCell className="font-mono font-medium">{record.poNumber}</TableCell>
                 <TableCell>{record.supplier}</TableCell>
@@ -183,9 +197,27 @@ const Receiving = () => {
                 </TableCell>
                 <TableCell>{getStatusBadge(record.status)}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon">
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Eye className="h-4 w-4 mr-2" /> View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="h-4 w-4 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

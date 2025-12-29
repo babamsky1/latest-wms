@@ -1,16 +1,34 @@
-import { useReducer } from "react";
-import { ArrowRightLeft, Plus, Search, Eye, CheckCircle, Clock, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
   TableCell,
+  TableCellWide,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  CheckCircle,
+  Clock,
+  Edit,
+  Eye,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Trash2
+} from "lucide-react";
+import { useReducer } from "react";
 
 interface Transfer {
   id: string;
@@ -30,7 +48,9 @@ type State = {
   searchQuery: string;
 };
 
-type Action = { type: "SET_SEARCH"; payload: string };
+type Action =
+  | { type: "SET_SEARCH"; payload: string }
+  | { type: "DELETE_TRANSFER"; payload: string };
 
 const initialTransfers: Transfer[] = [
   { id: "1", referenceNo: "TRF-2024-001", fromLocation: "Main Warehouse - A-01", toLocation: "Secondary Warehouse - B-02", itemCount: 5, totalQuantity: 500, status: "completed", initiatedDate: "2024-01-14", completedDate: "2024-01-15", initiatedBy: "John Smith" },
@@ -43,6 +63,8 @@ const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "SET_SEARCH":
       return { ...state, searchQuery: action.payload };
+    case "DELETE_TRANSFER":
+      return { ...state, transfers: state.transfers.filter(t => t.id !== action.payload) };
     default:
       return state;
   }
@@ -70,7 +92,7 @@ const Transfers = () => {
   };
 
   const filteredTransfers = state.transfers.filter(
-    (t) =>
+    t =>
       t.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
       t.fromLocation.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
       t.toLocation.toLowerCase().includes(state.searchQuery.toLowerCase())
@@ -78,6 +100,7 @@ const Transfers = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
@@ -91,42 +114,7 @@ const Transfers = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <ArrowRightLeft className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">In Transit</p>
-              <p className="stat-value">4</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Clock className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Pending</p>
-              <p className="stat-value">2</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <CheckCircle className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Completed Today</p>
-              <p className="stat-value">8</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Search */}
       <div className="content-section">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -141,40 +129,72 @@ const Transfers = () => {
         </div>
       </div>
 
+      {/* Table */}
       <div className="table-container">
         <Table>
+          {/* Colgroup for fixed widths */}
+          <colgroup>
+            <col className="w-24" /> {/* Reference No */}
+            <col className="w-[300px]" /> {/* From → To wide column */}
+            <col className="w-20" /> {/* Items */}
+            <col className="w-20" /> {/* Total Qty */}
+            <col className="w-32" /> {/* Status */}
+            <col className="w-24" /> {/* Initiated */}
+            <col className="w-32" /> {/* Initiated By */}
+            <col className="w-20" /> {/* Actions */}
+          </colgroup>
+
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Reference No.</TableHead>
               <TableHead>From → To</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Total Qty</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead>Total Qty</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Initiated</TableHead>
               <TableHead>Initiated By</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
-            {filteredTransfers.map((transfer) => (
+            {filteredTransfers.map(transfer => (
               <TableRow key={transfer.id} className="hover:bg-muted/30">
                 <TableCell className="font-mono font-medium">{transfer.referenceNo}</TableCell>
-                <TableCell>
+                <TableCellWide>
                   <div className="flex items-center gap-2 text-sm">
                     <Badge variant="outline" className="font-normal">{transfer.fromLocation}</Badge>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     <Badge variant="outline" className="font-normal">{transfer.toLocation}</Badge>
                   </div>
-                </TableCell>
-                <TableCell className="text-right">{transfer.itemCount}</TableCell>
-                <TableCell className="text-right font-semibold">{transfer.totalQuantity.toLocaleString()}</TableCell>
+                </TableCellWide>
+                <TableCell>{transfer.itemCount}</TableCell>
+                <TableCell className="font-semibold">{transfer.totalQuantity.toLocaleString()}</TableCell>
                 <TableCell>{getStatusBadge(transfer.status)}</TableCell>
                 <TableCell className="text-muted-foreground">{transfer.initiatedDate}</TableCell>
                 <TableCell>{transfer.initiatedBy}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon">
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Eye className="h-4 w-4 mr-2" />View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="h-4 w-4 mr-2" />Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => dispatch({ type: "DELETE_TRANSFER", payload: transfer.id })}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

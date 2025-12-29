@@ -1,6 +1,10 @@
-import { useReducer } from "react";
-import { Building2, Plus, Search, Edit, Phone, Mail, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -10,13 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Building2, Edit, Mail, MoreHorizontal, Phone, Plus, Search, Trash2 } from "lucide-react";
+import { useReducer } from "react";
 
 interface Supplier {
   id: string;
@@ -150,7 +149,7 @@ const Suppliers = () => {
               <TableHead>Code</TableHead>
               <TableHead>Supplier Name</TableHead>
               <TableHead>Contact</TableHead>
-              <TableHead className="text-right">Products</TableHead>
+              <TableHead>Products</TableHead>
               <TableHead>Last Order</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead>Status</TableHead>
@@ -180,7 +179,7 @@ const Suppliers = () => {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-semibold">{supplier.productCount}</TableCell>
+                <TableCell className="text-left font-semibold">{supplier.productCount}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.lastOrder}</TableCell>
                 <TableCell>
                   <span className={`font-semibold ${getRatingColor(supplier.rating)}`}>

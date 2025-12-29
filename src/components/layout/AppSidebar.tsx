@@ -1,42 +1,41 @@
-import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Package,
-  Boxes,
-  Warehouse,
-  TruckIcon,
-  ShoppingCart,
-  Users,
-  BarChart3,
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  Menu,
-  X,
-  PackagePlus,
-  PackageMinus,
-  ArrowLeftRight,
-  ClipboardList,
-  AlertTriangle,
-  Bell,
-  LogOut,
-  Building2,
-  MapPin,
-  FolderTree,
-  Undo2,
-  FileText,
-  UserCog,
-  History,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  BarChart3,
+  Boxes,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  FolderTree,
+  History,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Menu,
+  Package,
+  PackageMinus,
+  PackagePlus,
+  Settings,
+  ShoppingCart,
+  TruckIcon,
+  Undo2,
+  UserCog,
+  Users,
+  Warehouse,
+  X
+} from "lucide-react";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 
 interface NavItemProps {
   to: string;
@@ -153,13 +152,13 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             isCollapsed={isCollapsed}
           >
             <NavItem
-              to="/products"
+              to="/products/allproducts"
               icon={<Package className="h-4 w-4" />}
               label="All Products"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/categories"
+              to="/products/categories"
               icon={<FolderTree className="h-4 w-4" />}
               label="Categories"
               isCollapsed={isCollapsed}
@@ -173,25 +172,25 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             isCollapsed={isCollapsed}
           >
             <NavItem
-              to="/inventory"
+              to="/inventory/overview"
               icon={<ClipboardList className="h-4 w-4" />}
               label="Overview"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/stock-in"
+              to="/inventory/stock-in"
               icon={<PackagePlus className="h-4 w-4" />}
               label="Stock In"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/stock-out"
+              to="/inventory/stock-out"
               icon={<PackageMinus className="h-4 w-4" />}
               label="Stock Out"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/transfers"
+              to="/inventory/transfers"
               icon={<ArrowLeftRight className="h-4 w-4" />}
               label="Transfers"
               isCollapsed={isCollapsed}
@@ -204,13 +203,13 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             isCollapsed={isCollapsed}
           >
             <NavItem
-              to="/warehouses"
+              to="/warehouse/warehouses"
               icon={<Building2 className="h-4 w-4" />}
               label="Warehouses"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/locations"
+              to="/warehouse/locations"
               icon={<MapPin className="h-4 w-4" />}
               label="Locations"
               isCollapsed={isCollapsed}
@@ -223,19 +222,19 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             isCollapsed={isCollapsed}
           >
             <NavItem
-              to="/receiving"
+              to="/operations/receiving"
               icon={<PackagePlus className="h-4 w-4" />}
               label="Receiving"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/shipping"
+              to="/operations/shipping"
               icon={<TruckIcon className="h-4 w-4" />}
               label="Shipping"
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/returns"
+              to="/operations/returns"
               icon={<Undo2 className="h-4 w-4" />}
               label="Returns"
               isCollapsed={isCollapsed}
@@ -275,7 +274,7 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
               isCollapsed={isCollapsed}
             />
             <NavItem
-              to="/reports/low-stock"
+              to="/reports/low-stocks"
               icon={<AlertTriangle className="h-4 w-4" />}
               label="Low Stock"
               badge={12}

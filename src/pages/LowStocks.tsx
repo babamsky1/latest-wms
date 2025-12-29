@@ -1,7 +1,14 @@
-import { useReducer } from "react";
-import { AlertTriangle, Search, Filter, ShoppingCart, TrendingDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -10,16 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { AlertTriangle, Filter, Search, ShoppingCart, TrendingDown } from "lucide-react";
+import { useReducer } from "react";
 
 interface LowStockItem {
   id: string;
@@ -206,7 +206,7 @@ const LowStocks = () => {
               <TableHead>Category</TableHead>
               <TableHead>Stock Level</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Reorder Qty</TableHead>
+              <TableHead>Reorder Qty</TableHead>
               <TableHead>Supplier</TableHead>
               <TableHead className="w-[120px]">Actions</TableHead>
             </TableRow>
@@ -221,7 +221,7 @@ const LowStocks = () => {
                 </TableCell>
                 <TableCell>{getStockLevel(item.currentStock, item.reorderLevel)}</TableCell>
                 <TableCell>{getStatusBadge(item.status)}</TableCell>
-                <TableCell className="text-right font-semibold">
+                <TableCell className="text-left font-semibold">
                   {item.reorderQty} {item.unit}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{item.supplier}</TableCell>
