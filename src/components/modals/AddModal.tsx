@@ -42,7 +42,7 @@ interface FormModalProps<T> {
   size?: "sm" | "md" | "lg";
 }
 
-const AddModal = <T extends Record<string, unknown>>({
+const AddModal = <T extends object>({
   title,
   description,
   fields,

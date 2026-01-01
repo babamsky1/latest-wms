@@ -2,7 +2,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import AddModal, { AddField } from "@/components/modals/AddModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
-import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, FolderTree, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { FolderTree, MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { useReducer } from "react";
 
 interface Category {
@@ -39,7 +38,6 @@ type Action =
   | { type: "SET_SEARCH"; payload: string }
   | { type: "DELETE_CATEGORY"; payload: string }
   | { type: "ADD_CATEGORY"; payload: Category }
-  | { type: "UPDATE_CATEGORY"; payload: Category };
   | { type: "UPDATE_CATEGORY"; payload: Category };
 
 const initialCategories: Category[] = [

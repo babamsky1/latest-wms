@@ -42,7 +42,7 @@ interface EditModalProps<T> {
   size?: "sm" | "md" | "lg";
 }
 
-const EditModal = <T extends Record<string, unknown>>({
+const EditModal = <T extends object>({
   title,
   description,
   fields,
