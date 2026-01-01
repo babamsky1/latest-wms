@@ -99,10 +99,29 @@ export default function StockLocationInquiry() {
             <h1 className="page-title">Stock Location Inquiry</h1>
             <p className="page-description">Track inventory by location and batch</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Location
-          </Button>
+          <AddModal<LocationRecord>
+            title="New Stock Location"
+            description="Add a new stock location record"
+            fields={[
+              { label: "Location", name: "location", type: "text", required: true, placeholder: "e.g. A1" },
+              { label: "SKU", name: "sku", type: "text", required: true, placeholder: "e.g. SKU123" },
+              { label: "Product Name", name: "name", type: "text", required: true },
+              { label: "Batch / Lot", name: "batch", type: "text", required: false },
+              { label: "On Hand", name: "onHand", type: "number", required: true },
+              { label: "Reserved", name: "reserved", type: "number", required: false },
+            ]}
+            onSubmit={(data) => dispatch({ 
+              type: "ADD_RECORD", 
+              payload: { 
+                ...data, 
+                id: crypto.randomUUID(),
+                lastMove: new Date().toISOString().split('T')[0]
+              } as LocationRecord 
+            })}
+            triggerLabel="New Location"
+            submitLabel="Add Location"
+            size="lg"
+          />
         </div>
       </div>
 

@@ -100,10 +100,29 @@ export default function StockInquiry() {
             <h1 className="page-title">Stock Inquiry</h1>
             <p className="page-description">View current stock levels and availability</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Inquiry
-          </Button>
+          <AddModal<StockRecord>
+            title="New Stock Entry"
+            description="Add a new stock record to track inventory"
+            fields={[
+              { label: "SKU", name: "sku", type: "text", required: true, placeholder: "e.g. SKU123" },
+              { label: "Product Name", name: "name", type: "text", required: true },
+              { label: "Location", name: "location", type: "text", required: true, placeholder: "e.g. A1" },
+              { label: "On Hand", name: "onHand", type: "number", required: true },
+              { label: "Allocated", name: "allocated", type: "number", required: false },
+              { label: "Unit", name: "unit", type: "text", required: false, placeholder: "e.g. pcs" },
+            ]}
+            onSubmit={(data) => dispatch({ 
+              type: "ADD_RECORD", 
+              payload: { 
+                ...data, 
+                id: crypto.randomUUID(),
+                available: Number(data.onHand || 0) - Number(data.allocated || 0)
+              } as StockRecord 
+            })}
+            triggerLabel="New Entry"
+            submitLabel="Add Stock"
+            size="lg"
+          />
         </div>
       </div>
 
