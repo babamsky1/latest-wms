@@ -178,6 +178,30 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
               isCollapsed={isCollapsed}
             />
             <NavItem
+              to="/inventory/adjustments"
+              icon={<Undo2 className="h-4 w-4" />}
+              label="Adjustments"
+              isCollapsed={isCollapsed}
+            />
+            <NavItem
+              to="/inventory/stock-inquiry"
+              icon={<BarChart3 className="h-4 w-4" />}
+              label="Stock Inquiry"
+              isCollapsed={isCollapsed}
+            />
+            <NavItem
+              to="/inventory/stock-location-inquiry"
+              icon={<MapPin className="h-4 w-4" />}
+              label="Stock Location Inquiry"
+              isCollapsed={isCollapsed}
+            />
+            <NavItem
+              to="/inventory/stock-buffering"
+              icon={<AlertTriangle className="h-4 w-4" />}
+              label="Stock Buffering"
+              isCollapsed={isCollapsed}
+            />
+            <NavItem
               to="/inventory/stock-in"
               icon={<PackagePlus className="h-4 w-4" />}
               label="Stock In"

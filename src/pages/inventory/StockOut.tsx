@@ -1,19 +1,7 @@
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   CheckCircle,
   Clock,
@@ -26,7 +14,10 @@ import {
   Trash2,
   Truck
 } from "lucide-react";
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
+import AddModal, { AddField } from "../../components/modals/AddModal";
+import EditModal, { EditField } from "../../components/modals/EditModal";
+
 
 interface StockOutRecord {
   id: string;
@@ -38,6 +29,7 @@ interface StockOutRecord {
   status: "pending" | "dispatched" | "processing";
   dispatchDate: string;
   processedBy: string;
+  [key: string]: unknown;
 }
 
 type State = {
@@ -47,7 +39,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_RECORD"; payload: string };
+  | { type: "DELETE_RECORD"; payload: string }
+  | { type: "ADD_RECORD"; payload: StockOutRecord }
+  | { type: "UPDATE_RECORD"; payload: StockOutRecord };
 
 const initialRecords: StockOutRecord[] = [
   { id: "1", referenceNo: "SO-2024-001", destination: "Customer A", orderRef: "ORD-5001", itemCount: 3, totalQuantity: 150, status: "dispatched", dispatchDate: "2024-01-15", processedBy: "John Smith" },
@@ -63,6 +57,10 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_RECORD":
       return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "ADD_RECORD":
+      return { ...state, records: [{ ...action.payload, status: "pending", processedBy: "-" }, ...state.records] };
+    case "UPDATE_RECORD":
+      return { ...state, records: state.records.map(r => r.id === action.payload.id ? action.payload : r) };
     default:
       return state;
   }
@@ -73,6 +71,7 @@ const StockOut = () => {
     records: initialRecords,
     searchQuery: "",
   });
+  const [addOpen, setAddOpen] = useState(false);
 
   const getStatusBadge = (status: StockOutRecord["status"]) => {
     const config = {
@@ -89,6 +88,16 @@ const StockOut = () => {
     );
   };
 
+  const editStockOutFields: EditField<StockOutRecord>[] = [
+    { label: "Reference No", name: "referenceNo", type: "text", disabled: true },
+    { label: "Destination", name: "destination", type: "text", placeholder: "Enter destination", required: true },
+    { label: "Order Reference", name: "orderRef", type: "text", placeholder: "e.g., ORD-5001", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+    { label: "Dispatch Date", name: "dispatchDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Processed By", name: "processedBy", type: "text", placeholder: "e.g., John Smith", required: false },
+  ];
+
   const filteredRecords = state.records.filter(
     r =>
       r.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
@@ -98,18 +107,32 @@ const StockOut = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Stock Out</h1>
-            <p className="page-description">Manage outbound inventory and dispatches</p>
-          </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Stock Out
-          </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Stock Out</h1>
+          <p className="page-description">Manage outbound inventory and dispatches</p>
         </div>
+      {/* Add Modal */}
+      <AddModal<StockOutRecord>
+        title="New Stock Out"
+        description="Create a new stock out record"
+        fields={[
+          { label: "Reference No", name: "referenceNo", type: "text", placeholder: "Auto-generated", disabled: true },
+          { label: "Destination", name: "destination", type: "text", placeholder: "e.g., Customer A", required: true },
+          { label: "Order Reference", name: "orderRef", type: "text", placeholder: "e.g., ORD-5001", required: true },
+          { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+          { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+          { label: "Processed By", name: "processedBy", type: "text", placeholder: "Your name", required: true }
+        ]}
+        initialData={{ id: "", referenceNo: "", destination: "", orderRef: "", itemCount: 0, totalQuantity: 0, status: "pending", dispatchDate: new Date().toISOString().split('T')[0], processedBy: "" }}
+        onSubmit={() => setAddOpen(false)}
+        onOpenChange={setAddOpen}
+        triggerLabel="New Stock Out"
+        submitLabel="Create Record"
+      />
       </div>
+
+
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -165,32 +188,32 @@ const StockOut = () => {
 
       {/* Table */}
       <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Reference No.</TableHead>
-              <TableHead>Destination</TableHead>
-              <TableHead>Order Ref</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Total Qty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Dispatch Date</TableHead>
-              <TableHead>Processed By</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
+        <Table variant="inventory">
+          <TableHeader variant="inventory">
+            <TableRow variant="inventory" className="bg-muted/50">
+              <TableHead variant="inventory">Reference No.</TableHead>
+              <TableHead variant="inventory">Destination</TableHead>
+              <TableHead variant="inventory">Order Ref</TableHead>
+              <TableHead variant="inventory">Items</TableHead>
+              <TableHead variant="inventory">Total Qty</TableHead>
+              <TableHead variant="inventory">Status</TableHead>
+              <TableHead variant="inventory">Dispatch Date</TableHead>
+              <TableHead variant="inventory">Processed By</TableHead>
+              <TableHead variant="inventory" className="w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody variant="inventory">
             {filteredRecords.map(record => (
-              <TableRow key={record.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{record.referenceNo}</TableCell>
-                <TableCell>{record.destination}</TableCell>
-                <TableCell className="font-mono text-sm">{record.orderRef}</TableCell>
-                <TableCell>{record.itemCount}</TableCell>
-                <TableCell className="font-semibold">{record.totalQuantity.toLocaleString()}</TableCell>
-                <TableCell>{getStatusBadge(record.status)}</TableCell>
-                <TableCell className="text-muted-foreground">{record.dispatchDate}</TableCell>
-                <TableCell>{record.processedBy}</TableCell>
-                <TableCell>
+              <TableRow key={record.id} variant="inventory" className="hover:bg-muted/30">
+                <TableCell variant="inventory" className="font-mono font-medium">{record.referenceNo}</TableCell>
+                <TableCell variant="inventory">{record.destination}</TableCell>
+                <TableCell variant="inventory" className="font-mono text-sm">{record.orderRef}</TableCell>
+                <TableCell variant="inventory">{record.itemCount}</TableCell>
+                <TableCell variant="inventory" className="font-semibold">{record.totalQuantity.toLocaleString()}</TableCell>
+                <TableCell variant="inventory">{getStatusBadge(record.status)}</TableCell>
+                <TableCell variant="inventory" className="text-muted-foreground">{record.dispatchDate}</TableCell>
+                <TableCell variant="inventory">{record.processedBy}</TableCell>
+                <TableCell variant="inventory">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -198,11 +221,21 @@ const StockOut = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" />View
+                      <DropdownMenuItem asChild>
+                        <EditModal<StockOutRecord>
+                          title="Edit Stock Out"
+                          description="Update stock out record"
+                          fields={editStockOutFields}
+                          data={record}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as StockOutRecord })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Stock Out"
+                          size="lg"
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />Edit
+                        <Eye className="h-4 w-4 mr-2" />View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

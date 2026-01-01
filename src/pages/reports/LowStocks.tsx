@@ -123,10 +123,6 @@ const LowStocks = () => {
             <h1 className="page-title">Low Stock Items</h1>
             <p className="page-description">Items requiring attention or reorder</p>
           </div>
-          <Button>
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Create Purchase Order
-          </Button>
         </div>
       </div>
 

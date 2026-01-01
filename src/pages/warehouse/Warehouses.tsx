@@ -1,12 +1,15 @@
 import { useReducer } from "react";
 import { Warehouse, Plus, Search, Edit, MapPin, Boxes, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface WarehouseData {
+  [key: string]: unknown;
   id: string;
   name: string;
   code: string;
@@ -24,7 +27,10 @@ type State = {
   searchQuery: string;
 };
 
-type Action = { type: "SET_SEARCH"; payload: string };
+type Action = 
+  | { type: "SET_SEARCH"; payload: string }
+  | { type: "ADD_WAREHOUSE"; payload: WarehouseData }
+  | { type: "UPDATE_WAREHOUSE"; payload: WarehouseData };
 
 const initialWarehouses: WarehouseData[] = [
   { id: "1", name: "Main Warehouse", code: "WH-001", address: "123 Industrial Park, City A", manager: "John Smith", zones: 5, totalLocations: 250, capacity: 50000, usedCapacity: 32500, status: "active" },
@@ -37,6 +43,19 @@ const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "SET_SEARCH":
       return { ...state, searchQuery: action.payload };
+    case "ADD_WAREHOUSE":
+      return {
+        ...state,
+        warehouses: [
+          { ...action.payload, status: "active", zones: 0, totalLocations: 0, usedCapacity: 0 },
+          ...state.warehouses,
+        ],
+      };
+    case "UPDATE_WAREHOUSE":
+      return {
+        ...state,
+        warehouses: state.warehouses.map((w) => w.id === action.payload.id ? action.payload : w),
+      };
     default:
       return state;
   }
@@ -47,6 +66,38 @@ const Warehouses = () => {
     warehouses: initialWarehouses,
     searchQuery: "",
   });
+
+  // Generate next warehouse code
+  const nextWarehouseNumber = state.warehouses.length > 0
+    ? Math.max(...state.warehouses.map(w => parseInt(w.code.split('-')[1] || "0"))) + 1
+    : 1;
+  const generatedWarehouseCode = `WH-${nextWarehouseNumber.toString().padStart(3, "0")}`;
+
+  // Form fields configuration
+  const warehouseFields: AddField<WarehouseData>[] = [
+    { label: "Code (Auto)", name: "code", type: "text", disabled: true },
+    { label: "Warehouse Name", name: "name", type: "text", placeholder: "Enter warehouse name", required: true },
+    { label: "Address", name: "address", type: "textarea", placeholder: "Enter full address", required: true },
+    { label: "Manager", name: "manager", type: "text", placeholder: "Enter manager name", required: true },
+    { label: "Total Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
+  ];
+
+  const editWarehouseFields: EditField<WarehouseData>[] = [
+    { label: "Code", name: "code", type: "text", disabled: true },
+    { label: "Warehouse Name", name: "name", type: "text", placeholder: "Enter warehouse name", required: true },
+    { label: "Address", name: "address", type: "textarea", placeholder: "Enter full address", required: true },
+    { label: "Manager", name: "manager", type: "text", placeholder: "Enter manager name", required: true },
+    { label: "Total Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
+    { 
+      label: "Status", 
+      name: "status", 
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" }
+      ]
+    },
+  ];
 
   const getCapacityColor = (percentage: number) => {
     if (percentage >= 90) return "bg-destructive";
@@ -68,10 +119,27 @@ const Warehouses = () => {
             <h1 className="page-title">Warehouses</h1>
             <p className="page-description">Manage warehouse facilities and capacity</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Warehouse
-          </Button>
+          <AddModal<WarehouseData>
+            title="Add New Warehouse"
+            description="Create a new warehouse facility"
+            fields={warehouseFields}
+            initialData={{
+              id: String(Date.now()),
+              code: generatedWarehouseCode,
+              name: "",
+              address: "",
+              manager: "",
+              capacity: 0,
+              zones: 0,
+              totalLocations: 0,
+              usedCapacity: 0,
+              status: "active",
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_WAREHOUSE", payload: data as WarehouseData })}
+            triggerLabel="Add Warehouse"
+            submitLabel="Create Warehouse"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -113,9 +181,17 @@ const Warehouses = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon">
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <EditModal<WarehouseData>
+                    title="Edit Warehouse"
+                    description="Update warehouse details"
+                    fields={editWarehouseFields}
+                    data={warehouse}
+                    onSubmit={(data) => dispatch({ type: "UPDATE_WAREHOUSE", payload: data as WarehouseData })}
+                    triggerLabel=""
+                    triggerSize="icon"
+                    submitLabel="Update Warehouse"
+                    size="lg"
+                  />
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </div>

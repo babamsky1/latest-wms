@@ -1,21 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableCellWide,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableCellWide, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ArrowRight,
   ArrowRightLeft,
@@ -28,9 +15,13 @@ import {
   Search,
   Trash2
 } from "lucide-react";
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
+import AddModal, { AddField } from "../../components/modals/AddModal";
+import EditModal, { EditField } from "../../components/modals/EditModal";
+
 
 interface Transfer {
+  [key: string]: unknown;
   id: string;
   referenceNo: string;
   fromLocation: string;
@@ -50,7 +41,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_TRANSFER"; payload: string };
+  | { type: "DELETE_TRANSFER"; payload: string }
+  | { type: "ADD_TRANSFER"; payload: Transfer }
+  | { type: "UPDATE_TRANSFER"; payload: Transfer };
 
 const initialTransfers: Transfer[] = [
   { id: "1", referenceNo: "TRF-2024-001", fromLocation: "Main Warehouse - A-01", toLocation: "Secondary Warehouse - B-02", itemCount: 5, totalQuantity: 500, status: "completed", initiatedDate: "2024-01-14", completedDate: "2024-01-15", initiatedBy: "John Smith" },
@@ -65,6 +58,10 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_TRANSFER":
       return { ...state, transfers: state.transfers.filter(t => t.id !== action.payload) };
+    case "ADD_TRANSFER":
+      return { ...state, transfers: [{ ...action.payload, status: "pending", completedDate: null }, ...state.transfers] };
+    case "UPDATE_TRANSFER":
+      return { ...state, transfers: state.transfers.map(t => t.id === action.payload.id ? action.payload : t) };
     default:
       return state;
   }
@@ -75,6 +72,7 @@ const Transfers = () => {
     transfers: initialTransfers,
     searchQuery: "",
   });
+  const [addOpen, setAddOpen] = useState(false);
 
   const getStatusBadge = (status: Transfer["status"]) => {
     const config = {
@@ -91,6 +89,16 @@ const Transfers = () => {
     );
   };
 
+  const editTransferFields: EditField<Transfer>[] = [
+    { label: "Reference No", name: "referenceNo", type: "text", disabled: true },
+    { label: "From Location", name: "fromLocation", type: "text", required: true },
+    { label: "To Location", name: "toLocation", type: "text", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", required: true },
+    { label: "Total Quantity", name: "totalQuantity", type: "number", required: true },
+    { label: "Initiated Date", name: "initiatedDate", type: "text", required: true },
+    { label: "Initiated By", name: "initiatedBy", type: "text", required: false },
+  ];
+
   const filteredTransfers = state.transfers.filter(
     t =>
       t.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
@@ -101,18 +109,32 @@ const Transfers = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Transfers</h1>
-            <p className="page-description">Manage stock transfers between locations</p>
-          </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Transfer
-          </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Transfers</h1>
+          <p className="page-description">Manage stock transfers between locations</p>
         </div>
+      {/* Add Modal */}
+      <AddModal<Transfer>
+        title="New Transfer"
+        description="Create a new stock transfer"
+        fields={[
+          { label: "Reference No", name: "referenceNo", type: "text", placeholder: "Auto-generated", disabled: true },
+          { label: "From Location", name: "fromLocation", type: "text", placeholder: "e.g., Main Warehouse - A-01", required: true },
+          { label: "To Location", name: "toLocation", type: "text", placeholder: "e.g., Secondary Warehouse - B-02", required: true },
+          { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+          { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+          { label: "Initiated By", name: "initiatedBy", type: "text", placeholder: "Your name", required: true }
+        ]}
+        initialData={{ id: "", referenceNo: "", fromLocation: "", toLocation: "", itemCount: 0, totalQuantity: 0, status: "pending", initiatedDate: new Date().toISOString().split('T')[0], completedDate: null, initiatedBy: "" }}
+        onSubmit={() => setAddOpen(false)}
+        onOpenChange={setAddOpen}
+        triggerLabel="New Transfer"
+        submitLabel="Create Transfer"
+      />
       </div>
+
+
 
       {/* Search */}
       <div className="content-section">
@@ -131,7 +153,7 @@ const Transfers = () => {
 
       {/* Table */}
       <div className="table-container">
-        <Table>
+        <Table variant="inventory">
           {/* Colgroup for fixed widths */}
           <colgroup>
             <col className="w-24" /> {/* Reference No */}
@@ -144,36 +166,36 @@ const Transfers = () => {
             <col className="w-20" /> {/* Actions */}
           </colgroup>
 
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Reference No.</TableHead>
-              <TableHead>From → To</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Total Qty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Initiated</TableHead>
-              <TableHead>Initiated By</TableHead>
-              <TableHead>Actions</TableHead>
+          <TableHeader variant="inventory">
+            <TableRow variant="inventory" className="bg-muted/50">
+              <TableHead variant="inventory">Reference No.</TableHead>
+              <TableHead variant="inventory">From → To</TableHead>
+              <TableHead variant="inventory">Items</TableHead>
+              <TableHead variant="inventory">Total Qty</TableHead>
+              <TableHead variant="inventory">Status</TableHead>
+              <TableHead variant="inventory">Initiated</TableHead>
+              <TableHead variant="inventory">Initiated By</TableHead>
+              <TableHead variant="inventory">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
-          <TableBody>
+          <TableBody variant="inventory">
             {filteredTransfers.map(transfer => (
-              <TableRow key={transfer.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{transfer.referenceNo}</TableCell>
-                <TableCellWide>
+              <TableRow key={transfer.id} variant="inventory" className="hover:bg-muted/30">
+                <TableCell variant="inventory" className="font-mono font-medium">{transfer.referenceNo}</TableCell>
+                <TableCellWide variant="inventory">
                   <div className="flex items-center gap-2 text-sm">
                     <Badge variant="outline" className="font-normal">{transfer.fromLocation}</Badge>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     <Badge variant="outline" className="font-normal">{transfer.toLocation}</Badge>
                   </div>
                 </TableCellWide>
-                <TableCell>{transfer.itemCount}</TableCell>
-                <TableCell className="font-semibold">{transfer.totalQuantity.toLocaleString()}</TableCell>
-                <TableCell>{getStatusBadge(transfer.status)}</TableCell>
-                <TableCell className="text-muted-foreground">{transfer.initiatedDate}</TableCell>
-                <TableCell>{transfer.initiatedBy}</TableCell>
-                <TableCell>
+                <TableCell variant="inventory">{transfer.itemCount}</TableCell>
+                <TableCell variant="inventory" className="font-semibold">{transfer.totalQuantity.toLocaleString()}</TableCell>
+                <TableCell variant="inventory">{getStatusBadge(transfer.status)}</TableCell>
+                <TableCell variant="inventory" className="text-muted-foreground">{transfer.initiatedDate}</TableCell>
+                <TableCell variant="inventory">{transfer.initiatedBy}</TableCell>
+                <TableCell variant="inventory">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -181,11 +203,21 @@ const Transfers = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" />View
+                      <DropdownMenuItem asChild>
+                        <EditModal<Transfer>
+                          title="Edit Transfer"
+                          description="Update transfer details"
+                          fields={editTransferFields}
+                          data={transfer}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_TRANSFER", payload: data as Transfer })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Transfer"
+                          size="lg"
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />Edit
+                        <Eye className="h-4 w-4 mr-2" />View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

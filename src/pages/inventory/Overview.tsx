@@ -2,30 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import {
-  ArrowUpDown,
-  Filter,
-  MapPin,
-  Search,
-  Warehouse
-} from "lucide-react";
-import { useReducer } from "react";
+import { ArrowUpDown, Filter, MapPin, Search, Warehouse, Plus } from "lucide-react";
+import { useReducer, useState } from "react";
+import AddModal, { AddField } from "@/components/modals/AddModal";
 
 /* ================= TYPES ================= */
 
@@ -39,6 +21,7 @@ interface InventoryItem {
   capacity: number;
   unit: string;
   lastUpdated: string;
+  [key: string]: unknown;
 }
 
 /* ================= DATA ================= */
@@ -112,10 +95,10 @@ const reducer = (state: State, action: Action): State => {
 
 /* ================= COMPONENT ================= */
 
+
 const Overview = () => {
-  const [state, dispatch] = useReducer(reducer, {
-    searchQuery: "",
-  });
+  const [state, dispatch] = useReducer(reducer, { searchQuery: "" });
+  const [addOpen, setAddOpen] = useState(false);
 
   const filteredInventory = inventoryItems.filter((item) => {
     const q = state.searchQuery.toLowerCase();
@@ -135,12 +118,14 @@ const Overview = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="page-header">
-        <h1 className="page-title">Inventory Overview</h1>
-        <p className="page-description">
-          View and manage stock levels across all locations
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Inventory Overview</h1>
+          <p className="page-description">View and manage stock levels across all locations</p>
+        </div>
       </div>
+
+
 
       {/* Filters */}
       <div className="content-section">
@@ -150,12 +135,7 @@ const Overview = () => {
             <Input
               placeholder="Search by SKU, product name, or location..."
               value={state.searchQuery}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_SEARCH",
-                  payload: e.target.value,
-                })
-              }
+              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
               className="pl-10"
             />
           </div>
@@ -179,76 +159,64 @@ const Overview = () => {
 
       {/* Table */}
       <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>
+        <Table variant="inventory">
+          <TableHeader variant="inventory">
+            <TableRow variant="inventory" className="bg-muted/50">
+              <TableHead variant="inventory">
                 <Button variant="ghost" size="sm" className="-ml-3 h-8">
                   SKU
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>
+              <TableHead variant="inventory">Product Name</TableHead>
+              <TableHead variant="inventory">
                 <div className="flex items-center gap-2">
                   <Warehouse className="h-4 w-4 text-muted-foreground" />
                   Warehouse
                 </div>
               </TableHead>
-              <TableHead>
+              <TableHead variant="inventory">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   Location
                 </div>
               </TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead>Last Updated</TableHead>
+              <TableHead variant="inventory">Quantity</TableHead>
+              <TableHead variant="inventory">Capacity</TableHead>
+              <TableHead variant="inventory">Last Updated</TableHead>
             </TableRow>
           </TableHeader>
 
-          <TableBody>
+          <TableBody variant="inventory">
             {filteredInventory.map((item) => {
-              const usage = Math.round(
-                (item.quantity / item.capacity) * 100
-              );
-
+              const usage = Math.round((item.quantity / item.capacity) * 100);
               return (
-                <TableRow key={item.id} className="hover:bg-muted/30">
-                  <TableCell className="font-mono text-sm">
+                <TableRow key={item.id} variant="inventory" className="hover:bg-muted/30">
+                  <TableCell variant="inventory" className="font-mono text-sm">
                     {item.sku}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell variant="inventory" className="font-medium">
                     {item.name}
                   </TableCell>
-                  <TableCell>
+                  <TableCell variant="inventory">
                     <Badge variant="outline">{item.warehouse}</Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell variant="inventory">
                     <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
                       {item.location}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <span className="font-semibold">
-                      {item.quantity.toLocaleString()}
-                    </span>{" "}
-                    <span className="text-muted-foreground">
-                      {item.unit}
-                    </span>
+                  <TableCell variant="inventory">
+                    <span className="font-semibold">{item.quantity.toLocaleString()}</span>{" "}
+                    <span className="text-muted-foreground">{item.unit}</span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell variant="inventory">
                     <div className="flex items-center gap-3">
-                      <Progress
-                        value={usage}
-                        className={cn("h-2 w-24", getCapacityColor(usage))}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {usage}%
-                      </span>
+                      <Progress value={usage} className={cn("h-2 w-24", getCapacityColor(usage))} />
+                      <span className="text-sm text-muted-foreground">{usage}%</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell variant="inventory" className="text-muted-foreground text-sm">
                     {item.lastUpdated}
                   </TableCell>
                 </TableRow>

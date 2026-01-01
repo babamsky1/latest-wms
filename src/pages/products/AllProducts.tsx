@@ -1,4 +1,5 @@
-import AddModal, { Field } from "@/components/ui/addmodal";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,7 +51,8 @@ type Action =
   | { type: "TOGGLE_SELECT"; payload: string }
   | { type: "TOGGLE_SELECT_ALL" }
   | { type: "DELETE_PRODUCT"; payload: string }
-  | { type: "ADD_PRODUCT"; payload: Product };
+  | { type: "ADD_PRODUCT"; payload: Product }
+  | { type: "UPDATE_PRODUCT"; payload: Product };
 
 const initialProducts: Product[] = [
   { sku: "SKU-001", name: "Widget A-123", category: "Electronics", unit: "pcs", currentStock: 450, reorderLevel: 50, price: 24.99, status: "active" },
@@ -91,6 +93,11 @@ const reducer = (state: State, action: Action): State => {
           ...state.products,
         ],
       };
+    case "UPDATE_PRODUCT":
+      return {
+        ...state,
+        products: state.products.map((p) => p.sku === action.payload.sku ? action.payload : p),
+      };
     default:
       return state;
   }
@@ -110,18 +117,44 @@ const AllProducts = () => {
   const generatedSku = `SKU-${nextNumber.toString().padStart(3, "0")}`;
 
   // 4. Modal Field Configuration
-  const productFields: Field<Product>[] = [
+  const productFields: AddField<Product>[] = [
     { label: "SKU (Auto)", name: "sku", type: "text", disabled: true },
-    { label: "Product Name", name: "name", type: "text", placeholder: "Enter name" },
+    { label: "Product Name", name: "name", type: "text", placeholder: "Enter name", required: true },
     { 
       label: "Category", 
       name: "category", 
       type: "select", 
-      options: ["Electronics", "Machinery", "Raw Materials", "Packaging"] 
+      required: true,
+      options: [
+        { value: "Electronics", label: "Electronics" },
+        { value: "Machinery", label: "Machinery" },
+        { value: "Raw Materials", label: "Raw Materials" },
+        { value: "Packaging", label: "Packaging" }
+      ]
     },
-    { label: "Current Stock", name: "currentStock", type: "number", placeholder: "0" },
-    { label: "Reorder Level", name: "reorderLevel", type: "number", placeholder: "0" },
-    { label: "Price ($)", name: "price", type: "number", placeholder: "0.00" },
+    { label: "Current Stock", name: "currentStock", type: "number", placeholder: "0", required: true },
+    { label: "Reorder Level", name: "reorderLevel", type: "number", placeholder: "0", required: true },
+    { label: "Price ($)", name: "price", type: "number", placeholder: "0.00", required: true },
+  ];
+
+  const editProductFields: EditField<Product>[] = [
+    { label: "SKU", name: "sku", type: "text", disabled: true },
+    { label: "Product Name", name: "name", type: "text", placeholder: "Enter name", required: true },
+    { 
+      label: "Category", 
+      name: "category", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "Electronics", label: "Electronics" },
+        { value: "Machinery", label: "Machinery" },
+        { value: "Raw Materials", label: "Raw Materials" },
+        { value: "Packaging", label: "Packaging" }
+      ]
+    },
+    { label: "Current Stock", name: "currentStock", type: "number", placeholder: "0", required: true },
+    { label: "Reorder Level", name: "reorderLevel", type: "number", placeholder: "0", required: true },
+    { label: "Price ($)", name: "price", type: "number", placeholder: "0.00", required: true },
   ];
 
   const filteredProducts = state.products.filter((p) =>
@@ -146,14 +179,23 @@ const AllProducts = () => {
           <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Export</Button>
           <AddModal<Product>
             title="Add New Product"
+            description="Fill in the details to create a new product in inventory"
             fields={productFields}
             initialData={{ 
                 sku: generatedSku, 
                 currentStock: 0, 
                 reorderLevel: 0,
-                category: "Electronics" 
+                category: "Electronics",
+                name: "",
+                price: 0,
+                unit: "pcs",
+                status: "active"
             }}
             onSubmit={(data) => dispatch({ type: "ADD_PRODUCT", payload: data })}
+            triggerLabel="Add Product"
+            triggerSize="sm"
+            submitLabel="Create Product"
+            size="lg"
           />
         </div>
       </div>
@@ -210,7 +252,19 @@ const AllProducts = () => {
                         <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <EditModal<Product>
+                            title="Edit Product"
+                            description="Update product information"
+                            fields={editProductFields}
+                            data={p}
+                            onSubmit={(data) => dispatch({ type: "UPDATE_PRODUCT", payload: data as Product })}
+                            triggerLabel="Edit"
+                            triggerSize="sm"
+                            submitLabel="Update Product"
+                            size="lg"
+                          />
+                        </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={() => dispatch({ type: "DELETE_PRODUCT", payload: p.sku })}

@@ -1,5 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +31,7 @@ interface ReceivingRecord {
   receivedQty: number;
   status: "pending" | "receiving" | "completed" | "partial";
   dock: string;
+  [key: string]: unknown;
 }
 
 type State = {
@@ -38,7 +41,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_RECORD"; payload: string };
+  | { type: "DELETE_RECORD"; payload: string }
+  | { type: "ADD_RECORD"; payload: ReceivingRecord }
+  | { type: "UPDATE_RECORD"; payload: ReceivingRecord };
 
 const initialRecords: ReceivingRecord[] = [
   { id: "1", poNumber: "PO-2024-001", supplier: "Tech Supplies Co.", expectedDate: "2024-01-15", receivedDate: "2024-01-15", itemCount: 5, expectedQty: 500, receivedQty: 500, status: "completed", dock: "Dock A" },
@@ -54,6 +59,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_RECORD":
       return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "ADD_RECORD":
+      return {
+        ...state,
+        records: [
+          { ...action.payload, status: "pending", receivedQty: 0, receivedDate: null },
+          ...state.records,
+        ],
+      };
+    case "UPDATE_RECORD":
+      return {
+        ...state,
+        records: state.records.map((r) => r.id === action.payload.id ? action.payload : r),
+      };
     default:
       return state;
   }
@@ -64,6 +82,32 @@ const Receiving = () => {
     records: initialRecords,
     searchQuery: "",
   });
+
+  // Generate next PO number
+  const nextPONumber = state.records.length > 0
+    ? Math.max(...state.records.map(r => parseInt(r.poNumber.split('-')[2] || "0"))) + 1
+    : 1;
+  const generatedPONumber = `PO-2024-${nextPONumber.toString().padStart(3, "0")}`;
+
+  // Form fields configuration
+  const receivingFields: AddField<ReceivingRecord>[] = [
+    { label: "PO Number (Auto)", name: "poNumber", type: "text", disabled: true },
+    { label: "Supplier", name: "supplier", type: "text", placeholder: "Enter supplier name", required: true },
+    { label: "Expected Date", name: "expectedDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Dock", name: "dock", type: "text", placeholder: "e.g., Dock A", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Expected Quantity", name: "expectedQty", type: "number", placeholder: "0", required: true },
+  ];
+
+  const editReceivingFields: EditField<ReceivingRecord>[] = [
+    { label: "PO Number", name: "poNumber", type: "text", disabled: true },
+    { label: "Supplier", name: "supplier", type: "text", placeholder: "Enter supplier name", required: true },
+    { label: "Expected Date", name: "expectedDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Dock", name: "dock", type: "text", placeholder: "e.g., Dock A", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Expected Quantity", name: "expectedQty", type: "number", placeholder: "0", required: true },
+    { label: "Received Quantity", name: "receivedQty", type: "number", placeholder: "0", required: true },
+  ];
 
   const getStatusBadge = (status: ReceivingRecord["status"]) => {
     const config = {
@@ -96,10 +140,27 @@ const Receiving = () => {
             <h1 className="page-title">Receiving</h1>
             <p className="page-description">Manage incoming deliveries and put-away operations</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Receiving
-          </Button>
+          <AddModal<ReceivingRecord>
+            title="Add New Receiving"
+            description="Create a new receiving record"
+            fields={receivingFields}
+            initialData={{
+              id: String(Date.now()),
+              poNumber: generatedPONumber,
+              supplier: "",
+              expectedDate: "",
+              receivedDate: null,
+              itemCount: 0,
+              expectedQty: 0,
+              receivedQty: 0,
+              status: "pending",
+              dock: "",
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_RECORD", payload: data as ReceivingRecord })}
+            triggerLabel="New Receiving"
+            submitLabel="Create Receiving"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -204,11 +265,21 @@ const Receiving = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
+                      <DropdownMenuItem asChild>
+                        <EditModal<ReceivingRecord>
+                          title="Edit Receiving"
+                          description="Update receiving record"
+                          fields={editReceivingFields}
+                          data={record}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ReceivingRecord })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Receiving"
+                          size="lg"
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" /> Edit
+                        <Eye className="h-4 w-4 mr-2" /> View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

@@ -1,6 +1,8 @@
 import { useReducer } from "react";
 import { Users, Plus, Search, Edit, Trash2, MoreHorizontal, Shield, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface User {
+  [key: string]: unknown;
   id: string;
   name: string;
   email: string;
@@ -37,7 +40,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_USER"; payload: string };
+  | { type: "DELETE_USER"; payload: string }
+  | { type: "ADD_USER"; payload: User }
+  | { type: "UPDATE_USER"; payload: User };
 
 const initialUsers: User[] = [
   { id: "1", name: "John Smith", email: "john.smith@company.com", role: "admin", department: "IT", status: "active", lastLogin: "2024-01-15 14:30", createdAt: "2023-06-01" },
@@ -54,6 +59,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_USER":
       return { ...state, users: state.users.filter((u) => u.id !== action.payload) };
+    case "ADD_USER":
+      return {
+        ...state,
+        users: [
+          { ...action.payload, status: "pending", lastLogin: "-", createdAt: new Date().toISOString().split('T')[0] },
+          ...state.users,
+        ],
+      };
+    case "UPDATE_USER":
+      return {
+        ...state,
+        users: state.users.map((u) => u.id === action.payload.id ? action.payload : u),
+      };
     default:
       return state;
   }
@@ -64,6 +82,80 @@ const UserManagement = () => {
     users: initialUsers,
     searchQuery: "",
   });
+
+  // Form fields configuration
+  const userFields: AddField<User>[] = [
+    { label: "Name", name: "name", type: "text", placeholder: "Enter full name", required: true },
+    { label: "Email", name: "email", type: "email", placeholder: "Enter email address", required: true },
+    { 
+      label: "Role", 
+      name: "role", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "admin", label: "Admin" },
+        { value: "manager", label: "Manager" },
+        { value: "staff", label: "Staff" },
+        { value: "viewer", label: "Viewer" }
+      ]
+    },
+    { 
+      label: "Department", 
+      name: "department", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "IT", label: "IT" },
+        { value: "Operations", label: "Operations" },
+        { value: "Warehouse", label: "Warehouse" },
+        { value: "Finance", label: "Finance" },
+        { value: "Receiving", label: "Receiving" },
+        { value: "Shipping", label: "Shipping" }
+      ]
+    },
+  ];
+
+  const editUserFields: EditField<User>[] = [
+    { label: "Name", name: "name", type: "text", placeholder: "Enter full name", required: true },
+    { label: "Email", name: "email", type: "email", placeholder: "Enter email address", required: true },
+    { 
+      label: "Role", 
+      name: "role", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "admin", label: "Admin" },
+        { value: "manager", label: "Manager" },
+        { value: "staff", label: "Staff" },
+        { value: "viewer", label: "Viewer" }
+      ]
+    },
+    { 
+      label: "Department", 
+      name: "department", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "IT", label: "IT" },
+        { value: "Operations", label: "Operations" },
+        { value: "Warehouse", label: "Warehouse" },
+        { value: "Finance", label: "Finance" },
+        { value: "Receiving", label: "Receiving" },
+        { value: "Shipping", label: "Shipping" }
+      ]
+    },
+    { 
+      label: "Status", 
+      name: "status", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "pending", label: "Pending" }
+      ]
+    },
+  ];
 
   const getRoleBadge = (role: User["role"]) => {
     const colors = {
@@ -111,10 +203,25 @@ const UserManagement = () => {
             <h1 className="page-title">User Management</h1>
             <p className="page-description">Manage user accounts and permissions</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <AddModal<User>
+            title="Add New User"
+            description="Create a new user account and assign their role"
+            fields={userFields}
+            initialData={{
+              id: String(Date.now()),
+              name: "",
+              email: "",
+              role: "staff",
+              department: "Warehouse",
+              status: "pending",
+              lastLogin: "-",
+              createdAt: new Date().toISOString().split('T')[0],
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_USER", payload: data as User })}
+            triggerLabel="Add User"
+            submitLabel="Create User"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -214,22 +321,34 @@ const UserManagement = () => {
                 <TableCell className="text-muted-foreground text-sm">{user.lastLogin}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{user.createdAt}</TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_USER", payload: user.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-2">
+                    <EditModal<User>
+                      title="Edit User"
+                      description="Update user information"
+                      fields={editUserFields}
+                      data={user}
+                      onSubmit={(data) => dispatch({ type: "UPDATE_USER", payload: data as User })}
+                      triggerLabel="Edit"
+                      triggerSize="sm"
+                      submitLabel="Update User"
+                      size="lg"
+                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => dispatch({ type: "DELETE_USER", payload: user.id })}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,7 @@ import { Building2, Edit, Mail, MoreHorizontal, Phone, Plus, Search, Trash2 } fr
 import { useReducer } from "react";
 
 interface Supplier {
+  [key: string]: unknown;
   id: string;
   code: string;
   name: string;
@@ -38,7 +41,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_SUPPLIER"; payload: string };
+  | { type: "DELETE_SUPPLIER"; payload: string }
+  | { type: "ADD_SUPPLIER"; payload: Supplier }
+  | { type: "UPDATE_SUPPLIER"; payload: Supplier };
 
 const initialSuppliers: Supplier[] = [
   { id: "1", code: "SUP-001", name: "Tech Supplies Co.", contactPerson: "John Smith", email: "john@techsupplies.com", phone: "+1-555-0101", address: "123 Tech Park, CA", productCount: 145, lastOrder: "2024-01-15", status: "active", rating: 4.8 },
@@ -54,6 +59,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_SUPPLIER":
       return { ...state, suppliers: state.suppliers.filter((s) => s.id !== action.payload) };
+    case "ADD_SUPPLIER":
+      return {
+        ...state,
+        suppliers: [
+          { ...action.payload, status: "active", productCount: 0, lastOrder: "N/A", rating: 0 },
+          ...state.suppliers,
+        ],
+      };
+    case "UPDATE_SUPPLIER":
+      return {
+        ...state,
+        suppliers: state.suppliers.map((s) => s.id === action.payload.id ? action.payload : s),
+      };
     default:
       return state;
   }
@@ -64,6 +82,31 @@ const Suppliers = () => {
     suppliers: initialSuppliers,
     searchQuery: "",
   });
+
+  // Generate next Supplier code
+  const nextSupplierNumber = state.suppliers.length > 0
+    ? Math.max(...state.suppliers.map(s => parseInt(s.code.split('-')[1] || "0"))) + 1
+    : 1;
+  const generatedSupplierCode = `SUP-${nextSupplierNumber.toString().padStart(3, "0")}`;
+
+  // Form fields configuration
+  const supplierFields: AddField<Supplier>[] = [
+    { label: "Code (Auto)", name: "code", type: "text", disabled: true },
+    { label: "Supplier Name", name: "name", type: "text", placeholder: "Enter supplier name", required: true },
+    { label: "Contact Person", name: "contactPerson", type: "text", placeholder: "Enter contact name", required: true },
+    { label: "Email", name: "email", type: "email", placeholder: "Enter email address", required: true },
+    { label: "Phone", name: "phone", type: "text", placeholder: "Enter phone number", required: true },
+    { label: "Address", name: "address", type: "textarea", placeholder: "Enter full address", required: true },
+  ];
+
+  const editSupplierFields: EditField<Supplier>[] = [
+    { label: "Code", name: "code", type: "text", disabled: true },
+    { label: "Supplier Name", name: "name", type: "text", placeholder: "Enter supplier name", required: true },
+    { label: "Contact Person", name: "contactPerson", type: "text", placeholder: "Enter contact name", required: true },
+    { label: "Email", name: "email", type: "email", placeholder: "Enter email address", required: true },
+    { label: "Phone", name: "phone", type: "text", placeholder: "Enter phone number", required: true },
+    { label: "Address", name: "address", type: "textarea", placeholder: "Enter full address", required: true },
+  ];
 
   const filteredSuppliers = state.suppliers.filter(
     (s) =>
@@ -85,10 +128,28 @@ const Suppliers = () => {
             <h1 className="page-title">Suppliers</h1>
             <p className="page-description">Manage vendor relationships and contacts</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Supplier
-          </Button>
+          <AddModal<Supplier>
+            title="Add New Supplier"
+            description="Fill in the supplier details to add them to your system"
+            fields={supplierFields}
+            initialData={{
+              code: generatedSupplierCode,
+              name: "",
+              contactPerson: "",
+              email: "",
+              phone: "",
+              address: "",
+              id: String(Date.now()),
+              productCount: 0,
+              lastOrder: "N/A",
+              status: "active",
+              rating: 0,
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_SUPPLIER", payload: data as Supplier })}
+            triggerLabel="Add Supplier"
+            submitLabel="Create Supplier"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -199,7 +260,19 @@ const Suppliers = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <EditModal<Supplier>
+                          title="Edit Supplier"
+                          description="Update supplier information"
+                          fields={editSupplierFields}
+                          data={supplier}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_SUPPLIER", payload: data as Supplier })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Supplier"
+                          size="lg"
+                        />
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"
                         onClick={() => dispatch({ type: "DELETE_SUPPLIER", payload: supplier.id })}

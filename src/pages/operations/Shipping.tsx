@@ -1,5 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,7 @@ import { CheckCircle, Clock, Edit, Eye, MapPin, MoreHorizontal, Package, Plus, S
 import { useReducer } from "react";
 
 interface ShippingRecord {
+  [key: string]: unknown;
   id: string;
   shipmentNo: string;
   orderRef: string;
@@ -39,7 +42,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_RECORD"; payload: string };
+  | { type: "DELETE_RECORD"; payload: string }
+  | { type: "ADD_RECORD"; payload: ShippingRecord }
+  | { type: "UPDATE_RECORD"; payload: ShippingRecord };
 
 const initialRecords: ShippingRecord[] = [
   { id: "1", shipmentNo: "SHP-2024-001", orderRef: "ORD-5001", customer: "Acme Corp", carrier: "FedEx", destination: "New York, NY", packages: 3, weight: "15.5 kg", status: "shipped", shipDate: "2024-01-15", trackingNo: "FX123456789" },
@@ -55,7 +60,18 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_RECORD":
       return { ...state, records: state.records.filter(r => r.id !== action.payload) };
-    default:
+    case "ADD_RECORD":
+      return {
+        ...state,
+        records: [
+          { ...action.payload, status: "pending", trackingNo: "-" },
+          ...state.records,
+        ],
+      };    case "UPDATE_RECORD":
+      return {
+        ...state,
+        records: state.records.map((r) => r.id === action.payload.id ? action.payload : r),
+      };    default:
       return state;
   }
 };
@@ -65,6 +81,36 @@ const Shipping = () => {
     records: initialRecords,
     searchQuery: "",
   });
+
+  // Generate next Shipment number
+  const nextShipmentNumber = state.records.length > 0
+    ? Math.max(...state.records.map(r => parseInt(r.shipmentNo.split('-')[2] || "0"))) + 1
+    : 1;
+  const generatedShipmentNumber = `SHP-2024-${nextShipmentNumber.toString().padStart(3, "0")}`;
+
+  // Form fields configuration
+  const shippingFields: AddField<ShippingRecord>[] = [
+    { label: "Shipment No (Auto)", name: "shipmentNo", type: "text", disabled: true },
+    { label: "Order Reference", name: "orderRef", type: "text", placeholder: "e.g., ORD-5001", required: true },
+    { label: "Customer", name: "customer", type: "text", placeholder: "Enter customer name", required: true },
+    { label: "Carrier", name: "carrier", type: "text", placeholder: "e.g., FedEx", required: true },
+    { label: "Destination", name: "destination", type: "text", placeholder: "e.g., New York, NY", required: true },
+    { label: "Packages", name: "packages", type: "number", placeholder: "0", required: true },
+    { label: "Weight", name: "weight", type: "text", placeholder: "e.g., 15.5 kg", required: true },
+    { label: "Ship Date", name: "shipDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+  ];
+
+  const editShippingFields: EditField<ShippingRecord>[] = [
+    { label: "Shipment No", name: "shipmentNo", type: "text", disabled: true },
+    { label: "Order Reference", name: "orderRef", type: "text", placeholder: "e.g., ORD-5001", required: true },
+    { label: "Customer", name: "customer", type: "text", placeholder: "Enter customer name", required: true },
+    { label: "Carrier", name: "carrier", type: "text", placeholder: "e.g., FedEx", required: true },
+    { label: "Destination", name: "destination", type: "text", placeholder: "e.g., New York, NY", required: true },
+    { label: "Packages", name: "packages", type: "number", placeholder: "0", required: true },
+    { label: "Weight", name: "weight", type: "text", placeholder: "e.g., 15.5 kg", required: true },
+    { label: "Ship Date", name: "shipDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Tracking No", name: "trackingNo", type: "text", placeholder: "e.g., FX123456789", required: false },
+  ];
 
   const getStatusBadge = (status: ShippingRecord["status"]) => {
     const config = {
@@ -99,10 +145,28 @@ const Shipping = () => {
             <h1 className="page-title">Shipping</h1>
             <p className="page-description">Manage outbound shipments and carrier assignments</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Shipment
-          </Button>
+          <AddModal<ShippingRecord>
+            title="Add New Shipment"
+            description="Create a new shipping record"
+            fields={shippingFields}
+            initialData={{
+              id: String(Date.now()),
+              shipmentNo: generatedShipmentNumber,
+              orderRef: "",
+              customer: "",
+              carrier: "",
+              destination: "",
+              packages: 0,
+              weight: "",
+              status: "pending",
+              shipDate: "",
+              trackingNo: "-",
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_RECORD", payload: data as ShippingRecord })}
+            triggerLabel="New Shipment"
+            submitLabel="Create Shipment"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -213,11 +277,21 @@ const Shipping = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
+                      <DropdownMenuItem asChild>
+                        <EditModal<ShippingRecord>
+                          title="Edit Shipping"
+                          description="Update shipping record"
+                          fields={editShippingFields}
+                          data={record}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ShippingRecord })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Shipping"
+                          size="lg"
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" /> Edit
+                        <Eye className="h-4 w-4 mr-2" /> View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

@@ -1,6 +1,8 @@
 import { useReducer } from "react";
 import { MapPin, Plus, Search, Filter, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -28,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 interface Location {
+  [key: string]: unknown;
   id: string;
   code: string;
   warehouse: string;
@@ -50,7 +53,9 @@ type State = {
 type Action =
   | { type: "SET_SEARCH"; payload: string }
   | { type: "SET_WAREHOUSE_FILTER"; payload: string }
-  | { type: "DELETE_LOCATION"; payload: string };
+  | { type: "DELETE_LOCATION"; payload: string }
+  | { type: "ADD_LOCATION"; payload: Location }
+  | { type: "UPDATE_LOCATION"; payload: Location };
 
 const initialLocations: Location[] = [
   { id: "1", code: "A-01-02-03", warehouse: "Main Warehouse", zone: "A", rack: "01", shelf: "02", bin: "03", type: "picking", capacity: 500, usedCapacity: 250, status: "available" },
@@ -70,6 +75,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, warehouseFilter: action.payload };
     case "DELETE_LOCATION":
       return { ...state, locations: state.locations.filter((l) => l.id !== action.payload) };
+    case "ADD_LOCATION":
+      return {
+        ...state,
+        locations: [
+          { ...action.payload, status: "available", usedCapacity: 0 },
+          ...state.locations,
+        ],
+      };
+    case "UPDATE_LOCATION":
+      return {
+        ...state,
+        locations: state.locations.map((l) => l.id === action.payload.id ? action.payload : l),
+      };
     default:
       return state;
   }
@@ -81,6 +99,90 @@ const Locations = () => {
     searchQuery: "",
     warehouseFilter: "all",
   });
+
+  // Generate next location code
+  const nextLocationNumber = state.locations.length > 0
+    ? Math.max(...state.locations.map(l => {
+        const match = l.code.match(/\d+/);
+        return match ? parseInt(match[0]) : 0;
+      })) + 1
+    : 1;
+  const generatedLocationCode = `LOC-${nextLocationNumber.toString().padStart(3, "0")}`;
+
+  // Form fields configuration
+  const locationFields: AddField<Location>[] = [
+    { label: "Code (Auto)", name: "code", type: "text", disabled: true },
+    { 
+      label: "Warehouse", 
+      name: "warehouse", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "Main Warehouse", label: "Main Warehouse" },
+        { value: "Secondary Warehouse", label: "Secondary Warehouse" },
+        { value: "Cold Storage", label: "Cold Storage" }
+      ]
+    },
+    { label: "Zone", name: "zone", type: "text", placeholder: "e.g., A", required: true },
+    { label: "Rack", name: "rack", type: "text", placeholder: "e.g., 01", required: true },
+    { label: "Shelf", name: "shelf", type: "text", placeholder: "e.g., 02", required: true },
+    { label: "Bin", name: "bin", type: "text", placeholder: "e.g., 03", required: true },
+    { 
+      label: "Type", 
+      name: "type", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "picking", label: "Picking" },
+        { value: "storage", label: "Storage" },
+        { value: "staging", label: "Staging" },
+        { value: "receiving", label: "Receiving" }
+      ]
+    },
+    { label: "Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
+  ];
+
+  const editLocationFields: EditField<Location>[] = [
+    { label: "Code", name: "code", type: "text", disabled: true },
+    { 
+      label: "Warehouse", 
+      name: "warehouse", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "Main Warehouse", label: "Main Warehouse" },
+        { value: "Secondary Warehouse", label: "Secondary Warehouse" },
+        { value: "Cold Storage", label: "Cold Storage" }
+      ]
+    },
+    { label: "Zone", name: "zone", type: "text", placeholder: "e.g., A", required: true },
+    { label: "Rack", name: "rack", type: "text", placeholder: "e.g., 01", required: true },
+    { label: "Shelf", name: "shelf", type: "text", placeholder: "e.g., 02", required: true },
+    { label: "Bin", name: "bin", type: "text", placeholder: "e.g., 03", required: true },
+    { 
+      label: "Type", 
+      name: "type", 
+      type: "select", 
+      required: true,
+      options: [
+        { value: "picking", label: "Picking" },
+        { value: "storage", label: "Storage" },
+        { value: "staging", label: "Staging" },
+        { value: "receiving", label: "Receiving" }
+      ]
+    },
+    { label: "Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
+    { 
+      label: "Status", 
+      name: "status", 
+      type: "select",
+      options: [
+        { value: "available", label: "Available" },
+        { value: "full", label: "Full" },
+        { value: "reserved", label: "Reserved" }
+      ]
+    },
+  ];
 
   const getCapacityColor = (percentage: number) => {
     if (percentage >= 90) return "bg-destructive";
@@ -121,10 +223,28 @@ const Locations = () => {
             <h1 className="page-title">Locations</h1>
             <p className="page-description">Manage warehouse locations, zones, racks, and bins</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
-          </Button>
+          <AddModal<Location>
+            title="Add New Location"
+            description="Create a new warehouse location"
+            fields={locationFields}
+            initialData={{
+              id: String(Date.now()),
+              code: generatedLocationCode,
+              warehouse: "Main Warehouse",
+              zone: "",
+              rack: "",
+              shelf: "",
+              bin: "",
+              type: "storage",
+              capacity: 0,
+              usedCapacity: 0,
+              status: "available",
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_LOCATION", payload: data as Location })}
+            triggerLabel="Add Location"
+            submitLabel="Create Location"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -207,7 +327,19 @@ const Locations = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <EditModal<Location>
+                            title="Edit Location"
+                            description="Update location details"
+                            fields={editLocationFields}
+                            data={location}
+                            onSubmit={(data) => dispatch({ type: "UPDATE_LOCATION", payload: data as Location })}
+                            triggerLabel="Edit"
+                            triggerSize="sm"
+                            submitLabel="Update Location"
+                            size="lg"
+                          />
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => dispatch({ type: "DELETE_LOCATION", payload: location.id })}

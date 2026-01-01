@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,7 @@ import { CheckCircle, Clock, Edit, Eye, MoreHorizontal, Package, Plus, Search, T
 import { useReducer } from "react";
 
 interface ReturnRecord {
+  [key: string]: unknown;
   id: string;
   referenceNo: string;
   customer: string;
@@ -36,7 +39,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_RECORD"; payload: string };
+  | { type: "DELETE_RECORD"; payload: string }
+  | { type: "ADD_RECORD"; payload: ReturnRecord }
+  | { type: "UPDATE_RECORD"; payload: ReturnRecord };
 
 const initialRecords: ReturnRecord[] = [
   { id: "1", referenceNo: "RT-2024-001", customer: "Customer A", orderRef: "ORD-5001", itemCount: 2, totalQuantity: 100, status: "processed", returnDate: "2024-01-15", processedBy: "John Smith" },
@@ -50,6 +55,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_RECORD":
       return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "ADD_RECORD":
+      return {
+        ...state,
+        records: [
+          { ...action.payload, status: "pending", processedBy: "-" },
+          ...state.records,
+        ],
+      };
+    case "UPDATE_RECORD":
+      return {
+        ...state,
+        records: state.records.map((r) => r.id === action.payload.id ? action.payload : r),
+      };
     default:
       return state;
   }
@@ -60,6 +78,32 @@ const Returns = () => {
     records: initialRecords,
     searchQuery: "",
   });
+
+  // Generate next Reference number
+  const nextRefNumber = state.records.length > 0
+    ? Math.max(...state.records.map(r => parseInt(r.referenceNo.split('-')[2] || "0"))) + 1
+    : 1;
+  const generatedRefNumber = `RT-2024-${nextRefNumber.toString().padStart(3, "0")}`;
+
+  // Form fields configuration
+  const returnFields: AddField<ReturnRecord>[] = [
+    { label: "Reference No (Auto)", name: "referenceNo", type: "text", disabled: true },
+    { label: "Customer", name: "customer", type: "text", placeholder: "Enter customer name", required: true },
+    { label: "Order Reference", name: "orderRef", type: "text", placeholder: "e.g., ORD-5001", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+    { label: "Return Date", name: "returnDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+  ];
+
+  const editReturnFields: EditField<ReturnRecord>[] = [
+    { label: "Reference No", name: "referenceNo", type: "text", disabled: true },
+    { label: "Customer", name: "customer", type: "text", placeholder: "Enter customer name", required: true },
+    { label: "Order Reference", name: "orderRef", type: "text", placeholder: "e.g., ORD-5001", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+    { label: "Return Date", name: "returnDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Processed By", name: "processedBy", type: "text", placeholder: "e.g., John Smith", required: false },
+  ];
 
   const getStatusBadge = (status: ReturnRecord["status"]) => {
     const config = {
@@ -91,10 +135,26 @@ const Returns = () => {
             <h1 className="page-title">Returns</h1>
             <p className="page-description">Manage returned items and customer returns</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Return
-          </Button>
+          <AddModal<ReturnRecord>
+            title="Add New Return"
+            description="Create a new return record"
+            fields={returnFields}
+            initialData={{
+              id: String(Date.now()),
+              referenceNo: generatedRefNumber,
+              customer: "",
+              orderRef: "",
+              itemCount: 0,
+              totalQuantity: 0,
+              status: "pending",
+              returnDate: "",
+              processedBy: "-",
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_RECORD", payload: data as ReturnRecord })}
+            triggerLabel="New Return"
+            submitLabel="Create Return"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -185,11 +245,21 @@ const Returns = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
+                      <DropdownMenuItem asChild>
+                        <EditModal<ReturnRecord>
+                          title="Edit Return"
+                          description="Update return record"
+                          fields={editReturnFields}
+                          data={record}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ReturnRecord })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Return"
+                          size="lg"
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" /> Edit
+                        <Eye className="h-4 w-4 mr-2" /> View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

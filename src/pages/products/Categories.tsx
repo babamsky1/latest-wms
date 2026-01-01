@@ -1,5 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +37,10 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_CATEGORY"; payload: string };
+  | { type: "DELETE_CATEGORY"; payload: string }
+  | { type: "ADD_CATEGORY"; payload: Category }
+  | { type: "UPDATE_CATEGORY"; payload: Category };
+  | { type: "UPDATE_CATEGORY"; payload: Category };
 
 const initialCategories: Category[] = [
   { id: "1", name: "Electronics", parentCategory: null, productCount: 245, status: "active", createdAt: "2024-01-10" },
@@ -52,6 +58,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_CATEGORY":
       return { ...state, categories: state.categories.filter((c) => c.id !== action.payload) };
+    case "ADD_CATEGORY":
+      return {
+        ...state,
+        categories: [
+          { ...action.payload, status: "active", productCount: 0, createdAt: new Date().toISOString().split('T')[0] },
+          ...state.categories,
+        ],
+      };
+    case "UPDATE_CATEGORY":
+      return {
+        ...state,
+        categories: state.categories.map((c) => c.id === action.payload.id ? action.payload : c),
+      };
     default:
       return state;
   }
@@ -62,6 +81,48 @@ const Categories = () => {
     categories: initialCategories,
     searchQuery: "",
   });
+
+  // Form fields configuration
+  const categoryFields: AddField<Category>[] = [
+    { label: "Category Name", name: "name", type: "text", placeholder: "Enter category name", required: true },
+    { 
+      label: "Parent Category", 
+      name: "parentCategory", 
+      type: "select",
+      options: [
+        { value: "", label: "None (Root)" },
+        { value: "Electronics", label: "Electronics" },
+        { value: "Raw Materials", label: "Raw Materials" },
+        { value: "Packaging", label: "Packaging" },
+        { value: "Machinery Parts", label: "Machinery Parts" }
+      ]
+    },
+  ];
+
+  const editCategoryFields: EditField<Category>[] = [
+    { label: "Category Name", name: "name", type: "text", placeholder: "Enter category name", required: true },
+    { 
+      label: "Parent Category", 
+      name: "parentCategory", 
+      type: "select",
+      options: [
+        { value: "", label: "None (Root)" },
+        { value: "Electronics", label: "Electronics" },
+        { value: "Raw Materials", label: "Raw Materials" },
+        { value: "Packaging", label: "Packaging" },
+        { value: "Machinery Parts", label: "Machinery Parts" }
+      ]
+    },
+    { 
+      label: "Status", 
+      name: "status", 
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" }
+      ]
+    },
+  ];
 
   const filteredCategories = state.categories.filter((cat) =>
     cat.name.toLowerCase().includes(state.searchQuery.toLowerCase())
@@ -75,10 +136,23 @@ const Categories = () => {
             <h1 className="page-title">Categories</h1>
             <p className="page-description">Organize products into categories and subcategories</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Category
-          </Button>
+          <AddModal<Category>
+            title="Add New Category"
+            description="Create a new product category"
+            fields={categoryFields}
+            initialData={{
+              id: String(Date.now()),
+              name: "",
+              parentCategory: null,
+              productCount: 0,
+              status: "active",
+              createdAt: new Date().toISOString().split('T')[0],
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_CATEGORY", payload: { ...data, parentCategory: data.parentCategory || null } as Category })}
+            triggerLabel="Add Category"
+            submitLabel="Create Category"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -141,7 +215,19 @@ const Categories = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <EditModal<Category>
+                          title="Edit Category"
+                          description="Update category details"
+                          fields={editCategoryFields}
+                          data={category}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_CATEGORY", payload: data as Category })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Category"
+                          size="lg"
+                        />
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"
                         onClick={() => dispatch({ type: "DELETE_CATEGORY", payload: category.id })}

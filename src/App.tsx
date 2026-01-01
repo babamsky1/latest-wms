@@ -9,26 +9,30 @@ import { MainLayout } from "./components/layout/MainLayout";
 // Import all your page components
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import InventoryReport from "./pages/InventoryReport";
-import Locations from "./pages/Locations";
+import InventoryReport from "./pages/reports/InventoryReport";
+import Locations from "./pages/warehouse/Locations";
 import Login from "./pages/Login";
-import LowStocks from "./pages/LowStocks";
+import LowStocks from "./pages/reports/LowStocks";
 import NotFound from "./pages/NotFound";
 import Orders from "./pages/Orders";
-import Overview from "./pages/Overview";
+import Overview from "./pages/inventory/Overview";
+import Adjustments from "./pages/inventory/Adjustments";
+import StockInquiry from "./pages/inventory/StockInquiry";
+import StockLocationInquiry from "./pages/inventory/StockLocationInquiry";
+import StockBuffering from "./pages/inventory/StockBuffering";
 import AllProducts from "./pages/products/AllProducts";
 import Categories from "./pages/products/Categories";
-import Receiving from "./pages/Receiving";
-import Returns from "./pages/Returns";
+import Receiving from "./pages/operations/Receiving";
+import Returns from "./pages/operations/Returns";
 import Settings from "./pages/Settings";
-import Shipping from "./pages/Shipping";
-import StockIn from "./pages/StockIn";
-import Movements from "./pages/StockMovements";
-import StockOut from "./pages/StockOut";
+import Shipping from "./pages/operations/Shipping";
+import StockIn from "./pages/inventory/StockIn";
+import Movements from "./pages/reports/StockMovements";
+import StockOut from "./pages/inventory/StockOut";
 import Suppliers from "./pages/Suppliers";
-import Transfers from "./pages/Transfers";
+import Transfers from "./pages/inventory/Transfers";
 import Users from "./pages/UserManagement";
-import Warehouses from "./pages/Warehouses";
+import Warehouses from "./pages/warehouse/Warehouses";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +52,10 @@ const App = () => (
               <Route path="/products/allproducts" element={<AllProducts />} />
               <Route path="/products/categories" element={<Categories />} />
               <Route path="/inventory/overview" element={<Overview />} />
+              <Route path="/inventory/adjustments" element={<Adjustments />} />
+              <Route path="/inventory/stock-inquiry" element={<StockInquiry />} />
+              <Route path="/inventory/stock-location-inquiry" element={<StockLocationInquiry />} />
+              <Route path="/inventory/stock-buffering" element={<StockBuffering />} />
               <Route path="/inventory/stock-in" element={<StockIn />} />
               <Route path="/inventory/stock-out" element={<StockOut />} />
               <Route path="/inventory/transfers" element={<Transfers />} />

@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,7 @@ import { CheckCircle, Clock, Edit, Eye, MoreHorizontal, Package, Plus, Search, T
 import { useReducer } from "react";
 
 interface OrderRecord {
+  [key: string]: unknown;
   id: string;
   orderNo: string;
   customer: string;
@@ -35,7 +38,9 @@ type State = {
 
 type Action =
   | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_RECORD"; payload: string };
+  | { type: "DELETE_RECORD"; payload: string }
+  | { type: "ADD_RECORD"; payload: OrderRecord }
+  | { type: "UPDATE_RECORD"; payload: OrderRecord };
 
 const initialRecords: OrderRecord[] = [
   { id: "1", orderNo: "ORD-5001", customer: "Customer A", itemCount: 3, totalQuantity: 150, status: "shipped", orderDate: "2024-01-15", handledBy: "John Smith" },
@@ -51,6 +56,19 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, searchQuery: action.payload };
     case "DELETE_RECORD":
       return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "ADD_RECORD":
+      return {
+        ...state,
+        records: [
+          { ...action.payload, status: "pending", handledBy: "-" },
+          ...state.records,
+        ],
+      };
+    case "UPDATE_RECORD":
+      return {
+        ...state,
+        records: state.records.map((r) => r.id === action.payload.id ? action.payload : r),
+      };
     default:
       return state;
   }
@@ -61,6 +79,30 @@ const Orders = () => {
     records: initialRecords,
     searchQuery: "",
   });
+
+  // Generate next Order number
+  const nextOrderNumber = state.records.length > 0
+    ? Math.max(...state.records.map(r => parseInt(r.orderNo.split('-')[1] || "0"))) + 1
+    : 5001;
+  const generatedOrderNumber = `ORD-${nextOrderNumber}`;
+
+  // Form fields configuration
+  const orderFields: AddField<OrderRecord>[] = [
+    { label: "Order No (Auto)", name: "orderNo", type: "text", disabled: true },
+    { label: "Customer", name: "customer", type: "text", placeholder: "Enter customer name", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+    { label: "Order Date", name: "orderDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+  ];
+
+  const editOrderFields: EditField<OrderRecord>[] = [
+    { label: "Order No", name: "orderNo", type: "text", disabled: true },
+    { label: "Customer", name: "customer", type: "text", placeholder: "Enter customer name", required: true },
+    { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
+    { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
+    { label: "Order Date", name: "orderDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Handled By", name: "handledBy", type: "text", placeholder: "e.g., John Smith", required: false },
+  ];
 
   const getStatusBadge = (status: OrderRecord["status"]) => {
     const config = {
@@ -92,10 +134,25 @@ const Orders = () => {
             <h1 className="page-title">Orders</h1>
             <p className="page-description">Manage customer orders and their statuses</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Order
-          </Button>
+          <AddModal<OrderRecord>
+            title="Add New Order"
+            description="Create a new customer order"
+            fields={orderFields}
+            initialData={{
+              id: String(Date.now()),
+              orderNo: generatedOrderNumber,
+              customer: "",
+              itemCount: 0,
+              totalQuantity: 0,
+              status: "pending",
+              orderDate: "",
+              handledBy: "-",
+            }}
+            onSubmit={(data) => dispatch({ type: "ADD_RECORD", payload: data as OrderRecord })}
+            triggerLabel="New Order"
+            submitLabel="Create Order"
+            size="lg"
+          />
         </div>
       </div>
 
@@ -184,11 +241,21 @@ const Orders = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
+                      <DropdownMenuItem asChild>
+                        <EditModal<OrderRecord>
+                          title="Edit Order"
+                          description="Update order record"
+                          fields={editOrderFields}
+                          data={record}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as OrderRecord })}
+                          triggerLabel="Edit"
+                          triggerSize="sm"
+                          submitLabel="Update Order"
+                          size="lg"
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" /> Edit
+                        <Eye className="h-4 w-4 mr-2" /> View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"
