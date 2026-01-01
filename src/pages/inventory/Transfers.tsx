@@ -1,240 +1,274 @@
-import { Badge } from "@/components/ui/badge";
+import { useReducer } from "react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableCellWide, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
-  ArrowRight,
-  ArrowRightLeft,
-  CheckCircle,
-  Clock,
-  Edit,
-  Eye,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Trash2
-} from "lucide-react";
-import { useReducer, useState } from "react";
-import AddModal, { AddField } from "../../components/modals/AddModal";
-import EditModal, { EditField } from "../../components/modals/EditModal";
-
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DataTable, ColumnDef } from "@/components/table/DataTable";
+import { ArrowRight, ArrowRightLeft, CheckCircle, Clock, Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import AddModal from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
+import { format } from "date-fns";
 
 interface Transfer {
-  [key: string]: unknown;
   id: string;
   referenceNo: string;
-  fromLocation: string;
-  toLocation: string;
-  itemCount: number;
-  totalQuantity: number;
-  status: "pending" | "in-transit" | "completed";
-  initiatedDate: string;
-  completedDate: string | null;
-  initiatedBy: string;
+  transferDate: string;
+  neededDate: string;
+  sourceWarehouse: string;
+  destinationWarehouse: string;
+  requestedBy: string;
+  status: "pending" | "in-transit" | "completed" | "cancelled";
+  updatedBy: string;
+  updatedAt: string;
+  [key: string]: unknown;
 }
 
 type State = {
-  transfers: Transfer[];
-  searchQuery: string;
+  records: Transfer[];
 };
 
 type Action =
-  | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_TRANSFER"; payload: string }
-  | { type: "ADD_TRANSFER"; payload: Transfer }
-  | { type: "UPDATE_TRANSFER"; payload: Transfer };
+  | { type: "DELETE_RECORD"; payload: string }
+  | { type: "ADD_RECORD"; payload: Transfer }
+  | { type: "UPDATE_RECORD"; payload: Transfer };
 
-const initialTransfers: Transfer[] = [
-  { id: "1", referenceNo: "TRF-2024-001", fromLocation: "Main Warehouse - A-01", toLocation: "Secondary Warehouse - B-02", itemCount: 5, totalQuantity: 500, status: "completed", initiatedDate: "2024-01-14", completedDate: "2024-01-15", initiatedBy: "John Smith" },
-  { id: "2", referenceNo: "TRF-2024-002", fromLocation: "Zone A - Rack 3", toLocation: "Zone B - Rack 1", itemCount: 12, totalQuantity: 240, status: "in-transit", initiatedDate: "2024-01-15", completedDate: null, initiatedBy: "Jane Doe" },
-  { id: "3", referenceNo: "TRF-2024-003", fromLocation: "Secondary Warehouse - C-01", toLocation: "Main Warehouse - D-02", itemCount: 8, totalQuantity: 1600, status: "pending", initiatedDate: "2024-01-16", completedDate: null, initiatedBy: "Mike Johnson" },
-  { id: "4", referenceNo: "TRF-2024-004", fromLocation: "Main Warehouse - E-03", toLocation: "Outlet Store", itemCount: 3, totalQuantity: 75, status: "completed", initiatedDate: "2024-01-13", completedDate: "2024-01-13", initiatedBy: "Sarah Wilson" },
+const warehouseOptions = [
+  { value: "main", label: "Main Warehouse" },
+  { value: "secondary", label: "Secondary Warehouse" },
+  { value: "outlet", label: "Outlet Store" },
+  { value: "distribution", label: "Distribution Center" },
+];
+
+const statusOptions = [
+  { value: "pending", label: "Pending" },
+  { value: "in-transit", label: "In Transit" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+const initialRecords: Transfer[] = [
+  { id: "1", referenceNo: "TRF-2025-001", transferDate: "2025-12-31", neededDate: "2026-01-02", sourceWarehouse: "main", destinationWarehouse: "secondary", requestedBy: "John Smith", status: "completed", updatedBy: "manager", updatedAt: "2025-12-31 16:00" },
+  { id: "2", referenceNo: "TRF-2025-002", transferDate: "2025-12-30", neededDate: "2026-01-05", sourceWarehouse: "secondary", destinationWarehouse: "outlet", requestedBy: "Jane Doe", status: "in-transit", updatedBy: "warehouse_user", updatedAt: "2025-12-30 14:00" },
+  { id: "3", referenceNo: "TRF-2025-003", transferDate: "2025-12-29", neededDate: "2026-01-03", sourceWarehouse: "distribution", destinationWarehouse: "main", requestedBy: "Mike Johnson", status: "pending", updatedBy: "staff", updatedAt: "2025-12-29 10:00" },
 ];
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case "SET_SEARCH":
-      return { ...state, searchQuery: action.payload };
-    case "DELETE_TRANSFER":
-      return { ...state, transfers: state.transfers.filter(t => t.id !== action.payload) };
-    case "ADD_TRANSFER":
-      return { ...state, transfers: [{ ...action.payload, status: "pending", completedDate: null }, ...state.transfers] };
-    case "UPDATE_TRANSFER":
-      return { ...state, transfers: state.transfers.map(t => t.id === action.payload.id ? action.payload : t) };
+    case "DELETE_RECORD":
+      return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "ADD_RECORD":
+      return { ...state, records: [action.payload, ...state.records] };
+    case "UPDATE_RECORD":
+      return { ...state, records: state.records.map(r => r.id === action.payload.id ? action.payload : r) };
     default:
       return state;
   }
 };
 
-const Transfers = () => {
-  const [state, dispatch] = useReducer(reducer, {
-    transfers: initialTransfers,
-    searchQuery: "",
-  });
-  const [addOpen, setAddOpen] = useState(false);
+export default function Transfers() {
+  const [state, dispatch] = useReducer(reducer, { records: initialRecords });
 
   const getStatusBadge = (status: Transfer["status"]) => {
     const config = {
-      completed: { class: "status-active", icon: CheckCircle },
-      pending: { class: "status-warning", icon: Clock },
-      "in-transit": { class: "status-warning", icon: ArrowRightLeft },
+      completed: { class: "bg-success/20 text-success", icon: CheckCircle },
+      pending: { class: "bg-warning/20 text-warning", icon: Clock },
+      "in-transit": { class: "bg-primary/20 text-primary", icon: ArrowRightLeft },
+      cancelled: { class: "bg-destructive/20 text-destructive", icon: Clock },
     };
     const { class: className, icon: Icon } = config[status];
     return (
-      <span className={`status-badge ${className}`}>
-        <Icon className="h-3 w-3 mr-1" />
-        {status}
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${className}`}>
+        <Icon className="h-3 w-3" />
+        {status.replace("-", " ")}
       </span>
     );
   };
 
-  const editTransferFields: EditField<Transfer>[] = [
+  const editFields: EditField<Transfer>[] = [
     { label: "Reference No", name: "referenceNo", type: "text", disabled: true },
-    { label: "From Location", name: "fromLocation", type: "text", required: true },
-    { label: "To Location", name: "toLocation", type: "text", required: true },
-    { label: "Item Count", name: "itemCount", type: "number", required: true },
-    { label: "Total Quantity", name: "totalQuantity", type: "number", required: true },
-    { label: "Initiated Date", name: "initiatedDate", type: "text", required: true },
-    { label: "Initiated By", name: "initiatedBy", type: "text", required: false },
+    { label: "Transfer Date", name: "transferDate", type: "text", required: true },
+    { label: "Needed Date", name: "neededDate", type: "text", required: true },
+    { label: "Source Warehouse", name: "sourceWarehouse", type: "select", required: true, options: warehouseOptions },
+    { label: "Destination Warehouse", name: "destinationWarehouse", type: "select", required: true, options: warehouseOptions },
+    { label: "Requested By", name: "requestedBy", type: "text", required: true },
+    { label: "Status", name: "status", type: "select", required: true, options: statusOptions },
   ];
 
-  const filteredTransfers = state.transfers.filter(
-    t =>
-      t.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      t.fromLocation.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      t.toLocation.toLowerCase().includes(state.searchQuery.toLowerCase())
+  const columns: ColumnDef<Transfer>[] = [
+    { key: "referenceNo", label: "Reference No", sortable: true, filterable: true, className: "font-mono font-medium" },
+    { key: "transferDate", label: "Transfer Date", sortable: true, filterable: true },
+    { key: "neededDate", label: "Needed Date", sortable: true, filterable: true },
+    { 
+      key: "sourceWarehouse", 
+      label: "Source Warehouse", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: warehouseOptions,
+      render: (row) => (
+        <Badge variant="outline" className="font-normal">
+          {warehouseOptions.find(w => w.value === row.sourceWarehouse)?.label || row.sourceWarehouse}
+        </Badge>
+      )
+    },
+    { 
+      key: "destinationWarehouse", 
+      label: "Destination Warehouse", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: warehouseOptions,
+      render: (row) => (
+        <Badge variant="outline" className="font-normal">
+          {warehouseOptions.find(w => w.value === row.destinationWarehouse)?.label || row.destinationWarehouse}
+        </Badge>
+      )
+    },
+    { key: "requestedBy", label: "Requested By", sortable: true, filterable: true },
+    { 
+      key: "status", 
+      label: "Status", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: statusOptions,
+      render: (row) => getStatusBadge(row.status)
+    },
+    { key: "updatedBy", label: "Updated By", sortable: true, filterable: true },
+    { key: "updatedAt", label: "Updated At", sortable: true, className: "text-muted-foreground text-sm" },
+  ];
+
+  const renderActions = (record: Transfer) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-popover">
+        <DropdownMenuItem asChild>
+          <EditModal<Transfer>
+            title="Edit Transfer"
+            description="Update transfer details"
+            fields={editFields}
+            data={record}
+            onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: { ...data, updatedAt: format(new Date(), "yyyy-MM-dd HH:mm"), updatedBy: "admin" } as Transfer })}
+            triggerLabel="Edit"
+            triggerSize="sm"
+            submitLabel="Update Transfer"
+            size="lg"
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Eye className="h-4 w-4 mr-2" /> View
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive"
+          onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+        >
+          <Trash2 className="h-4 w-4 mr-2" /> Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Transfers</h1>
-          <p className="page-description">Manage stock transfers between locations</p>
+      <div className="page-header">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="page-title">Transfers</h1>
+            <p className="page-description">Manage stock transfers between warehouses</p>
+          </div>
+          <AddModal<Transfer>
+            title="New Transfer"
+            description="Create a new stock transfer"
+            fields={[
+              { label: "Transfer Date", name: "transferDate", type: "text", required: true, placeholder: "YYYY-MM-DD" },
+              { label: "Needed Date", name: "neededDate", type: "text", required: true, placeholder: "YYYY-MM-DD" },
+              { label: "Source Warehouse", name: "sourceWarehouse", type: "select", required: true, options: warehouseOptions },
+              { label: "Destination Warehouse", name: "destinationWarehouse", type: "select", required: true, options: warehouseOptions },
+              { label: "Requested By", name: "requestedBy", type: "text", required: true, placeholder: "Your name" },
+            ]}
+            onSubmit={(data) => {
+              const now = format(new Date(), "yyyy-MM-dd HH:mm");
+              dispatch({ 
+                type: "ADD_RECORD", 
+                payload: { 
+                  ...data, 
+                  id: crypto.randomUUID(), 
+                  referenceNo: `TRF-${new Date().getFullYear()}-${String(state.records.length + 1).padStart(3, '0')}`,
+                  status: "pending",
+                  updatedBy: "admin",
+                  updatedAt: now,
+                } as Transfer 
+              });
+            }}
+            triggerLabel="New Transfer"
+            submitLabel="Create Transfer"
+            size="lg"
+          />
         </div>
-      {/* Add Modal */}
-      <AddModal<Transfer>
-        title="New Transfer"
-        description="Create a new stock transfer"
-        fields={[
-          { label: "Reference No", name: "referenceNo", type: "text", placeholder: "Auto-generated", disabled: true },
-          { label: "From Location", name: "fromLocation", type: "text", placeholder: "e.g., Main Warehouse - A-01", required: true },
-          { label: "To Location", name: "toLocation", type: "text", placeholder: "e.g., Secondary Warehouse - B-02", required: true },
-          { label: "Item Count", name: "itemCount", type: "number", placeholder: "0", required: true },
-          { label: "Total Quantity", name: "totalQuantity", type: "number", placeholder: "0", required: true },
-          { label: "Initiated By", name: "initiatedBy", type: "text", placeholder: "Your name", required: true }
-        ]}
-        initialData={{ id: "", referenceNo: "", fromLocation: "", toLocation: "", itemCount: 0, totalQuantity: 0, status: "pending", initiatedDate: new Date().toISOString().split('T')[0], completedDate: null, initiatedBy: "" }}
-        onSubmit={() => setAddOpen(false)}
-        onOpenChange={setAddOpen}
-        triggerLabel="New Transfer"
-        submitLabel="Create Transfer"
-      />
       </div>
 
-
-
-      {/* Search */}
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search transfers..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <ArrowRightLeft className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="stat-label">Total Transfers</p>
+              <p className="stat-value">{state.records.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-warning/10">
+              <Clock className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <p className="stat-label">Pending</p>
+              <p className="stat-value">{state.records.filter(r => r.status === "pending").length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <ArrowRight className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="stat-label">In Transit</p>
+              <p className="stat-value">{state.records.filter(r => r.status === "in-transit").length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-success/10">
+              <CheckCircle className="h-5 w-5 text-success" />
+            </div>
+            <div>
+              <p className="stat-label">Completed</p>
+              <p className="stat-value">{state.records.filter(r => r.status === "completed").length}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="table-container">
-        <Table variant="inventory">
-          {/* Colgroup for fixed widths */}
-          <colgroup>
-            <col className="w-24" /> {/* Reference No */}
-            <col className="w-[300px]" /> {/* From → To wide column */}
-            <col className="w-20" /> {/* Items */}
-            <col className="w-20" /> {/* Total Qty */}
-            <col className="w-32" /> {/* Status */}
-            <col className="w-24" /> {/* Initiated */}
-            <col className="w-32" /> {/* Initiated By */}
-            <col className="w-20" /> {/* Actions */}
-          </colgroup>
-
-          <TableHeader variant="inventory">
-            <TableRow variant="inventory" className="bg-muted/50">
-              <TableHead variant="inventory">Reference No.</TableHead>
-              <TableHead variant="inventory">From → To</TableHead>
-              <TableHead variant="inventory">Items</TableHead>
-              <TableHead variant="inventory">Total Qty</TableHead>
-              <TableHead variant="inventory">Status</TableHead>
-              <TableHead variant="inventory">Initiated</TableHead>
-              <TableHead variant="inventory">Initiated By</TableHead>
-              <TableHead variant="inventory">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody variant="inventory">
-            {filteredTransfers.map(transfer => (
-              <TableRow key={transfer.id} variant="inventory" className="hover:bg-muted/30">
-                <TableCell variant="inventory" className="font-mono font-medium">{transfer.referenceNo}</TableCell>
-                <TableCellWide variant="inventory">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge variant="outline" className="font-normal">{transfer.fromLocation}</Badge>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant="outline" className="font-normal">{transfer.toLocation}</Badge>
-                  </div>
-                </TableCellWide>
-                <TableCell variant="inventory">{transfer.itemCount}</TableCell>
-                <TableCell variant="inventory" className="font-semibold">{transfer.totalQuantity.toLocaleString()}</TableCell>
-                <TableCell variant="inventory">{getStatusBadge(transfer.status)}</TableCell>
-                <TableCell variant="inventory" className="text-muted-foreground">{transfer.initiatedDate}</TableCell>
-                <TableCell variant="inventory">{transfer.initiatedBy}</TableCell>
-                <TableCell variant="inventory">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <EditModal<Transfer>
-                          title="Edit Transfer"
-                          description="Update transfer details"
-                          fields={editTransferFields}
-                          data={transfer}
-                          onSubmit={(data) => dispatch({ type: "UPDATE_TRANSFER", payload: data as Transfer })}
-                          triggerLabel="Edit"
-                          triggerSize="sm"
-                          submitLabel="Update Transfer"
-                          size="lg"
-                        />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" />View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_TRANSFER", payload: transfer.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={state.records}
+        columns={columns}
+        searchPlaceholder="Search transfers..."
+        actions={renderActions}
+        pageSize={10}
+      />
     </div>
   );
-};
-
-export default Transfers;
+}
