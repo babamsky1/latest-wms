@@ -114,10 +114,34 @@ export default function StockBuffering() {
             <h1 className="page-title">Stock Buffering</h1>
             <p className="page-description">Monitor inventory buffer levels and stock safety</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Buffer
-          </Button>
+          <AddModal<BufferRecord>
+            title="New Buffer Setting"
+            description="Set up a new stock buffer level"
+            fields={[
+              { label: "SKU", name: "sku", type: "text", required: true, placeholder: "e.g. SKU123" },
+              { label: "Product Name", name: "name", type: "text", required: true },
+              { label: "Location", name: "location", type: "text", required: true, placeholder: "e.g. A1" },
+              { label: "Buffer Level", name: "buffer", type: "number", required: true },
+              { label: "Current On Hand", name: "onHand", type: "number", required: true },
+            ]}
+            onSubmit={(data) => {
+              const buffer = Number(data.buffer || 0);
+              const onHand = Number(data.onHand || 0);
+              const status: BufferRecord["status"] = onHand < buffer ? "below" : onHand > buffer * 1.5 ? "above" : "safe";
+              dispatch({ 
+                type: "ADD_RECORD", 
+                payload: { 
+                  ...data, 
+                  id: crypto.randomUUID(),
+                  status,
+                  lastUpdated: new Date().toISOString().split('T')[0]
+                } as BufferRecord 
+              });
+            }}
+            triggerLabel="New Buffer"
+            submitLabel="Create Buffer"
+            size="lg"
+          />
         </div>
       </div>
 

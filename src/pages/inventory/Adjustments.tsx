@@ -115,10 +115,35 @@ export default function Adjustments() {
             <h1 className="page-title">Inventory Adjustments</h1>
             <p className="page-description">Manage stock adjustments and inventory corrections</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Adjustment
-          </Button>
+          <AddModal<AdjustmentRecord>
+            title="New Adjustment"
+            description="Create a new inventory adjustment record"
+            fields={[
+              { label: "Date", name: "date", type: "text", required: true, placeholder: "YYYY-MM-DD" },
+              { label: "SKU", name: "sku", type: "text", required: true, placeholder: "e.g. SKU123" },
+              { label: "Product Name", name: "name", type: "text", required: true },
+              { label: "Type", name: "type", type: "select", required: true, options: [
+                { value: "cycle-count", label: "Cycle Count" },
+                { value: "correction", label: "Correction" },
+                { value: "damaged", label: "Damaged" },
+                { value: "shrinkage", label: "Shrinkage" }
+              ]},
+              { label: "Quantity", name: "qty", type: "number", required: true },
+              { label: "Reason", name: "reason", type: "textarea", required: false },
+            ]}
+            onSubmit={(data) => dispatch({ 
+              type: "ADD_RECORD", 
+              payload: { 
+                ...data, 
+                id: crypto.randomUUID(), 
+                ref: `ADJ-${String(state.records.length + 1).padStart(3, '0')}`,
+                user: "admin"
+              } as AdjustmentRecord 
+            })}
+            triggerLabel="New Adjustment"
+            submitLabel="Create Adjustment"
+            size="lg"
+          />
         </div>
       </div>
 
