@@ -1,4 +1,3 @@
-
 import { useReducer } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,259 +6,125 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Edit, Eye, MoreHorizontal, Plus, Search, Trash2, AlertTriangle } from "lucide-react";
-import AddModal, { AddField } from "../../components/modals/AddModal";
-import EditModal, { EditField } from "../../components/modals/EditModal";
+import { DataTable, ColumnDef } from "@/components/table/DataTable";
+import { AlertTriangle, Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import AddModal from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 
 interface BufferRecord {
   id: string;
-  sku: string;
-  name: string;
-  location: string;
-  buffer: number;
-  onHand: number;
-  status: "below" | "above" | "safe";
-  lastUpdated: string;
+  psc: string;
+  shortDescription: string;
+  longDescription: string;
+  invoiceDescription: string;
+  picklistCode: string;
+  barcode: string;
+  productType: string;
+  igDescription: string;
+  subId: string;
+  brand: string;
+  group: string;
+  subCategory: string;
+  category: string;
+  unitOfMeasure: string;
+  currentStock: number;
+  reorderLevel: number;
+  status: "critical" | "low" | "adequate" | "overstocked";
   [key: string]: unknown;
 }
 
-type State = {
-  records: BufferRecord[];
-  searchQuery: string;
-};
-
+type State = { records: BufferRecord[] };
 type Action =
-  | { type: "SET_SEARCH"; payload: string }
   | { type: "DELETE_RECORD"; payload: string }
   | { type: "ADD_RECORD"; payload: BufferRecord }
   | { type: "UPDATE_RECORD"; payload: BufferRecord };
 
+const brandOptions = [{ value: "acme", label: "Acme" }, { value: "globex", label: "Globex" }, { value: "initech", label: "Initech" }];
+const categoryOptions = [{ value: "electronics", label: "Electronics" }, { value: "furniture", label: "Furniture" }, { value: "clothing", label: "Clothing" }];
+const groupOptions = [{ value: "group_a", label: "Group A" }, { value: "group_b", label: "Group B" }];
+const subCategoryOptions = [{ value: "sub_1", label: "Sub-Category 1" }, { value: "sub_2", label: "Sub-Category 2" }];
+const productTypeOptions = [{ value: "finished", label: "Finished Goods" }, { value: "raw", label: "Raw Materials" }, { value: "component", label: "Components" }];
+const uomOptions = [{ value: "pcs", label: "Pieces" }, { value: "kg", label: "Kilograms" }, { value: "box", label: "Box" }];
+const statusOptions = [{ value: "critical", label: "Critical" }, { value: "low", label: "Low" }, { value: "adequate", label: "Adequate" }, { value: "overstocked", label: "Overstocked" }];
+
 const initialRecords: BufferRecord[] = [
-  { id: "1", sku: "SKU123", name: "Widget A", location: "A1", buffer: 20, onHand: 18, status: "below", lastUpdated: "2025-12-30" },
-  { id: "2", sku: "SKU456", name: "Widget B", location: "B2", buffer: 50, onHand: 75, status: "above", lastUpdated: "2025-12-31" },
+  { id: "1", psc: "PSC-001", shortDescription: "Widget A", longDescription: "Widget A Premium Model for industrial use", invoiceDescription: "Widget A - Premium", picklistCode: "PL-001", barcode: "1234567890123", productType: "finished", igDescription: "IG001 - General", subId: "SUB-01", brand: "acme", group: "group_a", subCategory: "sub_1", category: "electronics", unitOfMeasure: "pcs", currentStock: 15, reorderLevel: 50, status: "critical" },
+  { id: "2", psc: "PSC-002", shortDescription: "Widget B", longDescription: "Widget B Standard Model", invoiceDescription: "Widget B - Std", picklistCode: "PL-002", barcode: "1234567890124", productType: "component", igDescription: "IG002 - Electronics", subId: "SUB-02", brand: "globex", group: "group_b", subCategory: "sub_2", category: "electronics", unitOfMeasure: "box", currentStock: 200, reorderLevel: 100, status: "adequate" },
 ];
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case "SET_SEARCH":
-      return { ...state, searchQuery: action.payload };
-    case "DELETE_RECORD":
-      return { ...state, records: state.records.filter(r => r.id !== action.payload) };
-    case "ADD_RECORD":
-      return { ...state, records: [action.payload, ...state.records] };
-    case "UPDATE_RECORD":
-      return { ...state, records: state.records.map(r => r.id === action.payload.id ? action.payload : r) };
-    default:
-      return state;
+    case "DELETE_RECORD": return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "ADD_RECORD": return { ...state, records: [action.payload, ...state.records] };
+    case "UPDATE_RECORD": return { ...state, records: state.records.map(r => r.id === action.payload.id ? action.payload : r) };
+    default: return state;
   }
 };
 
 export default function StockBuffering() {
-  const [state, dispatch] = useReducer(reducer, {
-    records: initialRecords,
-    searchQuery: "",
-  });
+  const [state, dispatch] = useReducer(reducer, { records: initialRecords });
 
   const getStatusBadge = (status: BufferRecord["status"]) => {
-    const config = {
-      below: { class: "status-warning", text: "Below Buffer" },
-      safe: { class: "status-active", text: "Safe Stock" },
-      above: { class: "status-success", text: "Above Buffer" },
-    };
-    const { class: className, text } = config[status];
-    return (
-      <span className={`status-badge ${className}`}>
-        {text}
-      </span>
-    );
+    const config = { critical: "bg-destructive/20 text-destructive", low: "bg-warning/20 text-warning", adequate: "bg-success/20 text-success", overstocked: "bg-primary/20 text-primary" };
+    return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config[status]}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>;
   };
 
-  const editBufferFields: EditField<BufferRecord>[] = [
-    { label: "SKU", name: "sku", type: "text", disabled: true },
-    { label: "Product Name", name: "name", type: "text", required: true },
-    { label: "Location", name: "location", type: "text", required: true },
-    { label: "Buffer Level", name: "buffer", type: "number", required: true },
-    { label: "On Hand", name: "onHand", type: "number", required: true },
-    { label: "Last Updated", name: "lastUpdated", type: "text", required: false },
+  const editFields: EditField<BufferRecord>[] = [
+    { label: "PSC", name: "psc", type: "text", disabled: true },
+    { label: "Short Description", name: "shortDescription", type: "text", required: true },
+    { label: "Long Description", name: "longDescription", type: "textarea", required: false },
+    { label: "Invoice Description", name: "invoiceDescription", type: "text", required: false },
+    { label: "Picklist Code", name: "picklistCode", type: "text", required: true },
+    { label: "Barcode", name: "barcode", type: "text", required: true },
+    { label: "Product Type", name: "productType", type: "select", required: true, options: productTypeOptions },
+    { label: "Brand", name: "brand", type: "select", required: true, options: brandOptions },
+    { label: "Category", name: "category", type: "select", required: true, options: categoryOptions },
+    { label: "Group", name: "group", type: "select", required: true, options: groupOptions },
+    { label: "Sub-Category", name: "subCategory", type: "select", required: true, options: subCategoryOptions },
+    { label: "Unit of Measure", name: "unitOfMeasure", type: "select", required: true, options: uomOptions },
+    { label: "Current Stock", name: "currentStock", type: "number", required: true },
+    { label: "Reorder Level", name: "reorderLevel", type: "number", required: true },
+    { label: "Status", name: "status", type: "select", required: true, options: statusOptions },
   ];
 
-  const filteredRecords = state.records.filter(
-    r =>
-      r.sku.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.location.toLowerCase().includes(state.searchQuery.toLowerCase())
-  );
+  const columns: ColumnDef<BufferRecord>[] = [
+    { key: "psc", label: "PSC", sortable: true, filterable: true, className: "font-mono font-medium" },
+    { key: "shortDescription", label: "Short Desc", sortable: true, filterable: true },
+    { key: "barcode", label: "Barcode", sortable: true, filterable: true, className: "font-mono text-sm" },
+    { key: "productType", label: "Type", sortable: true, filterable: true, filterType: "select", filterOptions: productTypeOptions, render: (row) => productTypeOptions.find(p => p.value === row.productType)?.label || row.productType },
+    { key: "brand", label: "Brand", sortable: true, filterable: true, filterType: "select", filterOptions: brandOptions, render: (row) => brandOptions.find(b => b.value === row.brand)?.label || row.brand },
+    { key: "category", label: "Category", sortable: true, filterable: true, filterType: "select", filterOptions: categoryOptions, render: (row) => categoryOptions.find(c => c.value === row.category)?.label || row.category },
+    { key: "unitOfMeasure", label: "UoM", sortable: true, filterable: true, filterType: "select", filterOptions: uomOptions, render: (row) => uomOptions.find(u => u.value === row.unitOfMeasure)?.label || row.unitOfMeasure },
+    { key: "currentStock", label: "Current Stock", sortable: true, filterable: true, className: "font-semibold" },
+    { key: "reorderLevel", label: "Reorder Level", sortable: true, filterable: true },
+    { key: "status", label: "Status", sortable: true, filterable: true, filterType: "select", filterOptions: statusOptions, render: (row) => getStatusBadge(row.status) },
+  ];
 
-  const belowBufferCount = state.records.filter(r => r.status === "below").length;
-  const totalBufferItems = state.records.length;
-  const avgBufferUtilization = Math.round(
-    (state.records.reduce((sum, r) => sum + (r.onHand / r.buffer), 0) / state.records.length) * 100
+  const renderActions = (record: BufferRecord) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-popover">
+        <DropdownMenuItem asChild><EditModal<BufferRecord> title="Edit Buffer" fields={editFields} data={record} onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as BufferRecord })} triggerLabel="Edit" triggerSize="sm" submitLabel="Update" size="lg" /></DropdownMenuItem>
+        <DropdownMenuItem><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
+        <DropdownMenuItem className="text-destructive" onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="page-header">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Stock Buffering</h1>
-            <p className="page-description">Monitor inventory buffer levels and stock safety</p>
-          </div>
-          <AddModal<BufferRecord>
-            title="New Buffer Setting"
-            description="Set up a new stock buffer level"
-            fields={[
-              { label: "SKU", name: "sku", type: "text", required: true, placeholder: "e.g. SKU123" },
-              { label: "Product Name", name: "name", type: "text", required: true },
-              { label: "Location", name: "location", type: "text", required: true, placeholder: "e.g. A1" },
-              { label: "Buffer Level", name: "buffer", type: "number", required: true },
-              { label: "Current On Hand", name: "onHand", type: "number", required: true },
-            ]}
-            onSubmit={(data) => {
-              const buffer = Number(data.buffer || 0);
-              const onHand = Number(data.onHand || 0);
-              const status: BufferRecord["status"] = onHand < buffer ? "below" : onHand > buffer * 1.5 ? "above" : "safe";
-              dispatch({ 
-                type: "ADD_RECORD", 
-                payload: { 
-                  ...data, 
-                  id: crypto.randomUUID(),
-                  status,
-                  lastUpdated: new Date().toISOString().split('T')[0]
-                } as BufferRecord 
-              });
-            }}
-            triggerLabel="New Buffer"
-            submitLabel="Create Buffer"
-            size="lg"
-          />
+          <div><h1 className="page-title">Stock Buffering</h1><p className="page-description">Monitor buffer levels and reorder points</p></div>
+          <AddModal<BufferRecord> title="New Buffer Entry" fields={editFields.filter(f => !f.disabled)} onSubmit={(data) => dispatch({ type: "ADD_RECORD", payload: { ...data, id: crypto.randomUUID() } as BufferRecord })} triggerLabel="New Buffer" submitLabel="Add" size="lg" />
         </div>
       </div>
-
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="stat-label">Below Buffer</p>
-              <p className="stat-value">{belowBufferCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <AlertTriangle className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">Total Buffered Items</p>
-              <p className="stat-value">{totalBufferItems}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <AlertTriangle className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Avg Buffer Utilization</p>
-              <p className="stat-value">{avgBufferUtilization}%</p>
-            </div>
-          </div>
-        </div>
+        <div className="stat-card"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-destructive/10"><AlertTriangle className="h-5 w-5 text-destructive" /></div><div><p className="stat-label">Critical</p><p className="stat-value">{state.records.filter(r => r.status === "critical").length}</p></div></div></div>
+        <div className="stat-card"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-warning/10"><AlertTriangle className="h-5 w-5 text-warning" /></div><div><p className="stat-label">Low Stock</p><p className="stat-value">{state.records.filter(r => r.status === "low").length}</p></div></div></div>
+        <div className="stat-card"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-success/10"><AlertTriangle className="h-5 w-5 text-success" /></div><div><p className="stat-label">Adequate</p><p className="stat-value">{state.records.filter(r => r.status === "adequate").length}</p></div></div></div>
       </div>
-
-      {/* Search */}
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by SKU, name or location..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Item SKU</TableHead>
-              <TableHead>Item Name</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Buffer Level</TableHead>
-              <TableHead>On Hand</TableHead>
-              <TableHead>Buffer Status</TableHead>
-              <TableHead>Last Updated</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRecords.map(record => (
-              <TableRow key={record.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{record.sku}</TableCell>
-                <TableCell>{record.name}</TableCell>
-                <TableCell className="font-mono">{record.location}</TableCell>
-                <TableCell className="text-left font-semibold">{record.buffer}</TableCell>
-                <TableCell className="text-left font-semibold">{record.onHand}</TableCell>
-                <TableCell>{getStatusBadge(record.status)}</TableCell>
-                <TableCell className="text-muted-foreground">{record.lastUpdated}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <EditModal<BufferRecord>
-                          title="Edit Buffer Setting"
-                          description="Update buffer record"
-                          fields={editBufferFields}
-                          data={record}
-                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as BufferRecord })}
-                          triggerLabel="Edit"
-                          triggerSize="sm"
-                          submitLabel="Update Buffer"
-                          size="lg"
-                        />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable data={state.records} columns={columns} searchPlaceholder="Search by PSC, description, barcode..." actions={renderActions} pageSize={10} />
     </div>
   );
 }

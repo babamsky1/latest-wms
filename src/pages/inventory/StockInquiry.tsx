@@ -1,5 +1,3 @@
-
-
 import { useReducer } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,51 +6,74 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Search as SearchIcon } from "lucide-react";
-import AddModal, { AddField } from "../../components/modals/AddModal";
-import EditModal, { EditField } from "../../components/modals/EditModal";
+import { DataTable, ColumnDef } from "@/components/table/DataTable";
+import { Eye, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import AddModal from "@/components/modals/AddModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 
 interface StockRecord {
   id: string;
-  sku: string;
-  name: string;
-  location: string;
-  onHand: number;
-  allocated: number;
-  available: number;
-  unit: string;
-  [key: string]: string | number; // Index signature to satisfy Record<string, unknown>
+  psc: string;
+  anNo: string;
+  barcode: string;
+  description: string;
+  igNo: string;
+  brand: string;
+  category: string;
+  group: string;
+  subCategory: string;
+  [key: string]: unknown;
 }
 
 type State = {
   records: StockRecord[];
-  searchQuery: string;
 };
 
 type Action =
-  | { type: "SET_SEARCH"; payload: string }
   | { type: "DELETE_RECORD"; payload: string }
   | { type: "ADD_RECORD"; payload: StockRecord }
   | { type: "UPDATE_RECORD"; payload: StockRecord };
 
+const igNoOptions = [
+  { value: "IG001", label: "IG001 - General" },
+  { value: "IG002", label: "IG002 - Electronics" },
+  { value: "IG003", label: "IG003 - Consumables" },
+];
+
+const brandOptions = [
+  { value: "acme", label: "Acme Corp" },
+  { value: "globex", label: "Globex Inc" },
+  { value: "initech", label: "Initech" },
+  { value: "hooli", label: "Hooli" },
+];
+
+const categoryOptions = [
+  { value: "electronics", label: "Electronics" },
+  { value: "furniture", label: "Furniture" },
+  { value: "clothing", label: "Clothing" },
+  { value: "food", label: "Food & Beverage" },
+];
+
+const groupOptions = [
+  { value: "group_a", label: "Group A" },
+  { value: "group_b", label: "Group B" },
+  { value: "group_c", label: "Group C" },
+];
+
+const subCategoryOptions = [
+  { value: "sub_1", label: "Sub-Category 1" },
+  { value: "sub_2", label: "Sub-Category 2" },
+  { value: "sub_3", label: "Sub-Category 3" },
+];
+
 const initialRecords: StockRecord[] = [
-  { id: "1", sku: "SKU123", name: "Widget A", location: "A1", onHand: 100, allocated: 20, available: 80, unit: "pcs" },
-  { id: "2", sku: "SKU456", name: "Widget B", location: "B2", onHand: 250, allocated: 50, available: 200, unit: "pcs" },
+  { id: "1", psc: "PSC-001", anNo: "AN-12345", barcode: "1234567890123", description: "Widget A - Premium Model", igNo: "IG001", brand: "acme", category: "electronics", group: "group_a", subCategory: "sub_1" },
+  { id: "2", psc: "PSC-002", anNo: "AN-12346", barcode: "1234567890124", description: "Widget B - Standard Model", igNo: "IG002", brand: "globex", category: "electronics", group: "group_b", subCategory: "sub_2" },
+  { id: "3", psc: "PSC-003", anNo: "AN-12347", barcode: "1234567890125", description: "Office Chair Deluxe", igNo: "IG003", brand: "initech", category: "furniture", group: "group_a", subCategory: "sub_3" },
 ];
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case "SET_SEARCH":
-      return { ...state, searchQuery: action.payload };
     case "DELETE_RECORD":
       return { ...state, records: state.records.filter(r => r.id !== action.payload) };
     case "ADD_RECORD":
@@ -65,182 +86,187 @@ const reducer = (state: State, action: Action): State => {
 };
 
 export default function StockInquiry() {
-  const [state, dispatch] = useReducer(reducer, {
-    records: initialRecords,
-    searchQuery: "",
-  });
+  const [state, dispatch] = useReducer(reducer, { records: initialRecords });
 
-  const filteredRecords = state.records.filter(
-    r =>
-      r.sku.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.location.toLowerCase().includes(state.searchQuery.toLowerCase())
-  );
-
-  const editStockFields: EditField<StockRecord>[] = [
-    { label: "SKU", name: "sku", type: "text", disabled: true },
-    { label: "Product Name", name: "name", type: "text", required: true },
-    { label: "Location", name: "location", type: "text", required: true },
-    { label: "On Hand", name: "onHand", type: "number", required: true },
-    { label: "Allocated", name: "allocated", type: "number", required: false },
-    { label: "Available", name: "available", type: "number", required: false },
-    { label: "Unit", name: "unit", type: "text", required: false },
+  const editFields: EditField<StockRecord>[] = [
+    { label: "PSC", name: "psc", type: "text", disabled: true },
+    { label: "AN No", name: "anNo", type: "text", required: true },
+    { label: "Barcode", name: "barcode", type: "text", required: true },
+    { label: "Description", name: "description", type: "text", required: true },
+    { label: "IG No", name: "igNo", type: "select", required: true, options: igNoOptions },
+    { label: "Brand", name: "brand", type: "select", required: true, options: brandOptions },
+    { label: "Category", name: "category", type: "select", required: true, options: categoryOptions },
+    { label: "Group", name: "group", type: "select", required: true, options: groupOptions },
+    { label: "Sub-Category", name: "subCategory", type: "select", required: true, options: subCategoryOptions },
   ];
 
-  const totalOnHand = state.records.reduce((sum, r) => sum + r.onHand, 0);
-  const totalAllocated = state.records.reduce((sum, r) => sum + r.allocated, 0);
-  const totalAvailable = state.records.reduce((sum, r) => sum + r.available, 0);
+  const columns: ColumnDef<StockRecord>[] = [
+    { key: "psc", label: "PSC", sortable: true, filterable: true, className: "font-mono font-medium" },
+    { key: "anNo", label: "AN No", sortable: true, filterable: true, className: "font-mono" },
+    { key: "barcode", label: "Barcode", sortable: true, filterable: true, className: "font-mono text-muted-foreground" },
+    { key: "description", label: "Description", sortable: true, filterable: true },
+    { 
+      key: "igNo", 
+      label: "IG No", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: igNoOptions,
+      render: (row) => igNoOptions.find(i => i.value === row.igNo)?.label.split(" - ")[0] || row.igNo
+    },
+    { 
+      key: "brand", 
+      label: "Brand", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: brandOptions,
+      render: (row) => brandOptions.find(b => b.value === row.brand)?.label || row.brand
+    },
+    { 
+      key: "category", 
+      label: "Category", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: categoryOptions,
+      render: (row) => categoryOptions.find(c => c.value === row.category)?.label || row.category
+    },
+    { 
+      key: "group", 
+      label: "Group", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: groupOptions,
+      render: (row) => groupOptions.find(g => g.value === row.group)?.label || row.group
+    },
+    { 
+      key: "subCategory", 
+      label: "Sub-Category", 
+      sortable: true, 
+      filterable: true,
+      filterType: "select",
+      filterOptions: subCategoryOptions,
+      render: (row) => subCategoryOptions.find(s => s.value === row.subCategory)?.label || row.subCategory
+    },
+  ];
+
+  const renderActions = (record: StockRecord) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-popover">
+        <DropdownMenuItem asChild>
+          <EditModal<StockRecord>
+            title="Edit Stock Record"
+            description="Update stock inquiry record"
+            fields={editFields}
+            data={record}
+            onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as StockRecord })}
+            triggerLabel="Edit"
+            triggerSize="sm"
+            submitLabel="Update Record"
+            size="lg"
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Eye className="h-4 w-4 mr-2" /> View
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive"
+          onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+        >
+          <Trash2 className="h-4 w-4 mr-2" /> Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Stock Inquiry</h1>
-            <p className="page-description">View current stock levels and availability</p>
+            <p className="page-description">Search and view product stock information</p>
           </div>
           <AddModal<StockRecord>
             title="New Stock Entry"
-            description="Add a new stock record to track inventory"
+            description="Add a new stock inquiry record"
             fields={[
-              { label: "SKU", name: "sku", type: "text", required: true, placeholder: "e.g. SKU123" },
-              { label: "Product Name", name: "name", type: "text", required: true },
-              { label: "Location", name: "location", type: "text", required: true, placeholder: "e.g. A1" },
-              { label: "On Hand", name: "onHand", type: "number", required: true },
-              { label: "Allocated", name: "allocated", type: "number", required: false },
-              { label: "Unit", name: "unit", type: "text", required: false, placeholder: "e.g. pcs" },
+              { label: "PSC", name: "psc", type: "text", required: true, placeholder: "e.g. PSC-001" },
+              { label: "AN No", name: "anNo", type: "text", required: true, placeholder: "e.g. AN-12345" },
+              { label: "Barcode", name: "barcode", type: "text", required: true, placeholder: "13-digit barcode" },
+              { label: "Description", name: "description", type: "text", required: true },
+              { label: "IG No", name: "igNo", type: "select", required: true, options: igNoOptions },
+              { label: "Brand", name: "brand", type: "select", required: true, options: brandOptions },
+              { label: "Category", name: "category", type: "select", required: true, options: categoryOptions },
+              { label: "Group", name: "group", type: "select", required: true, options: groupOptions },
+              { label: "Sub-Category", name: "subCategory", type: "select", required: true, options: subCategoryOptions },
             ]}
-            onSubmit={(data) => dispatch({ 
-              type: "ADD_RECORD", 
-              payload: { 
-                ...data, 
-                id: crypto.randomUUID(),
-                available: Number(data.onHand || 0) - Number(data.allocated || 0)
-              } as StockRecord 
-            })}
+            onSubmit={(data) => {
+              dispatch({ 
+                type: "ADD_RECORD", 
+                payload: { 
+                  ...data, 
+                  id: crypto.randomUUID(),
+                } as StockRecord 
+              });
+            }}
             triggerLabel="New Entry"
-            submitLabel="Add Stock"
+            submitLabel="Add Record"
             size="lg"
           />
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
-              <SearchIcon className="h-5 w-5 text-primary" />
+              <Search className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="stat-label">Total On Hand</p>
-              <p className="stat-value">{totalOnHand.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <SearchIcon className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Total Allocated</p>
-              <p className="stat-value">{totalAllocated.toLocaleString()}</p>
+              <p className="stat-label">Total Products</p>
+              <p className="stat-value">{state.records.length}</p>
             </div>
           </div>
         </div>
         <div className="stat-card">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-success/10">
-              <SearchIcon className="h-5 w-5 text-success" />
+              <Search className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="stat-label">Total Available</p>
-              <p className="stat-value">{totalAvailable.toLocaleString()}</p>
+              <p className="stat-label">Categories</p>
+              <p className="stat-value">{new Set(state.records.map(r => r.category)).size}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-warning/10">
+              <Search className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <p className="stat-label">Brands</p>
+              <p className="stat-value">{new Set(state.records.map(r => r.brand)).size}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by SKU, name or location..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Item SKU</TableHead>
-              <TableHead>Item Name</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>On Hand</TableHead>
-              <TableHead>Allocated</TableHead>
-              <TableHead>Available</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRecords.map(record => (
-              <TableRow key={record.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{record.sku}</TableCell>
-                <TableCell>{record.name}</TableCell>
-                <TableCell className="font-mono">{record.location}</TableCell>
-                <TableCell className="text-left font-semibold">{record.onHand.toLocaleString()}</TableCell>
-                <TableCell className="text-left text-warning">{record.allocated.toLocaleString()}</TableCell>
-                <TableCell className="text-left text-success">{record.available.toLocaleString()}</TableCell>
-                <TableCell>{record.unit}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <EditModal<StockRecord>
-                          title="Edit Stock"
-                          description="Update stock record"
-                          fields={editStockFields}
-                          data={record}
-                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as StockRecord })}
-                          triggerLabel="Edit"
-                          triggerSize="sm"
-                          submitLabel="Update Stock"
-                          size="lg"
-                        />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={state.records}
+        columns={columns}
+        searchPlaceholder="Search by PSC, barcode, description..."
+        actions={renderActions}
+        pageSize={10}
+      />
     </div>
   );
 }
