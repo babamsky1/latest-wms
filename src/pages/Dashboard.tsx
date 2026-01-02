@@ -3,7 +3,6 @@ import { LowStockTable } from "@/components/dashboard/LowStockTable";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
-import { AlertTriangle, Boxes, Package, PackageMinus, TrendingDown, TruckIcon } from "lucide-react";
 
 const Dashboard = () => {
   return (
@@ -19,45 +18,45 @@ const Dashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
-          title="Total Products"
+          label="Total Products"
           value="2,847"
-          icon={Package}
-          iconColor="text-primary"
+          contentType="products"
+          variant="primary"
           change={{ value: 12, type: "increase" }}
         />
         <StatCard
-          title="Total Stock"
+          label="Total Stock"
           value="145,328"
-          icon={Boxes}
-          iconColor="text-info"
+          contentType="stock"
+          variant="default"
           change={{ value: 8, type: "increase" }}
         />
         <StatCard
-          title="Low Stock Items"
+          label="Low Stock Items"
           value="23"
-          icon={AlertTriangle}
-          iconColor="text-warning"
+          contentType="low-stock"
+          variant="warning"
           change={{ value: 5, type: "decrease" }}
         />
         <StatCard
-          title="Out of Stock"
+          label="Out of Stock"
           value="8"
-          icon={TrendingDown}
-          iconColor="text-destructive"
+          contentType="alert"
+          variant="destructive"
           change={{ value: 2, type: "increase" }}
         />
         <StatCard
-          title="Today's Inbound"
+          label="Today's Inbound"
           value="1,247"
-          icon={TruckIcon}
-          iconColor="text-success"
+          contentType="receiving"
+          variant="success"
           change={{ value: 18, type: "increase" }}
         />
         <StatCard
-          title="Today's Outbound"
+          label="Today's Outbound"
           value="892"
-          icon={PackageMinus}
-          iconColor="text-primary"
+          contentType="shipping"
+          variant="primary"
           change={{ value: 3, type: "neutral" }}
         />
       </div>

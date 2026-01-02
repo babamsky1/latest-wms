@@ -1,14 +1,20 @@
+/**
+ * Stock Buffering Page - Refactored
+ * 
+ * Features:
+ * ✅ Standardized StatCards
+ * ✅ DataTable with ActionMenu
+ * ✅ Status badges with correct variants
+ * ✅ Buffer management
+ */
+
+import { StatCard } from "@/components/dashboard/StatCard";
 import AddModal from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { AlertTriangle, MoreHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useReducer } from "react";
 
 interface BufferRecord {
@@ -30,6 +36,10 @@ interface BufferRecord {
   currentStock: number;
   reorderLevel: number;
   status: "critical" | "low" | "adequate" | "overstocked";
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
   [key: string]: unknown;
 }
 
@@ -94,6 +104,9 @@ const initialRecords: BufferRecord[] = [
     currentStock: 15,
     reorderLevel: 50,
     status: "critical",
+    created_at: "2024-01-01T08:00:00Z",
+    created_by: "Admin",
+    updated_at: "2024-01-10T11:00:00Z",
   },
   {
     id: "2",
@@ -114,6 +127,9 @@ const initialRecords: BufferRecord[] = [
     currentStock: 200,
     reorderLevel: 100,
     status: "adequate",
+    created_at: "2024-01-01T08:00:00Z",
+    created_by: "Admin",
+    updated_at: "2024-01-01T08:00:00Z",
   },
 ];
 
@@ -125,12 +141,27 @@ const reducer = (state: State, action: Action): State => {
         records: state.records.filter((r) => r.id !== action.payload),
       };
     case "ADD_RECORD":
-      return { ...state, records: [action.payload, ...state.records] };
+      return { 
+        ...state, 
+        records: [
+          {
+            ...action.payload,
+            created_at: new Date().toISOString(),
+            created_by: "Current User",
+            updated_at: new Date().toISOString(),
+          }, 
+          ...state.records
+        ] 
+      };
     case "UPDATE_RECORD":
       return {
         ...state,
         records: state.records.map((r) =>
-          r.id === action.payload.id ? action.payload : r
+          r.id === action.payload.id ? {
+            ...action.payload,
+            updated_at: new Date().toISOString(),
+            updated_by: "Current User"
+          } : r
         ),
       };
     default:
@@ -140,22 +171,6 @@ const reducer = (state: State, action: Action): State => {
 
 export default function StockBuffering() {
   const [state, dispatch] = useReducer(reducer, { records: initialRecords });
-
-  const getStatusBadge = (status: BufferRecord["status"]) => {
-    const config = {
-      critical: "bg-destructive/20 text-destructive",
-      low: "bg-warning/20 text-warning",
-      adequate: "bg-success/20 text-success",
-      overstocked: "bg-primary/20 text-primary",
-    };
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config[status]}`}
-      >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
 
   const editFields: EditField<BufferRecord>[] = [
     { label: "PSC", name: "psc", type: "text", disabled: true },
@@ -251,201 +266,146 @@ export default function StockBuffering() {
     {
       key: "psc",
       label: "PSC",
-      sortable: true,
-      filterable: true,
       className: "font-mono font-medium",
     },
     {
       key: "shortDescription",
-      label: "Short Desc",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      key: "barcode",
-      label: "Barcode",
-      sortable: true,
-      filterable: true,
-      className: "font-mono text-sm",
+      label: "Description",
     },
     {
       key: "productType",
       label: "Type",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: productTypeOptions,
-      render: (row) =>
-        productTypeOptions.find((p) => p.value === row.productType)?.label ||
-        row.productType,
+      render: (row) => {
+        const label = productTypeOptions.find((p) => p.value === row.productType)?.label || row.productType;
+        return <Badge variant="outline">{label}</Badge>;
+      }
     },
     {
       key: "brand",
       label: "Brand",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: brandOptions,
-      render: (row) =>
-        brandOptions.find((b) => b.value === row.brand)?.label || row.brand,
+      render: (row) => brandOptions.find((b) => b.value === row.brand)?.label || row.brand,
     },
     {
       key: "category",
       label: "Category",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: categoryOptions,
-      render: (row) =>
-        categoryOptions.find((c) => c.value === row.category)?.label ||
-        row.category,
+      render: (row) => categoryOptions.find((c) => c.value === row.category)?.label || row.category,
     },
     {
       key: "unitOfMeasure",
       label: "UoM",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: uomOptions,
-      render: (row) =>
-        uomOptions.find((u) => u.value === row.unitOfMeasure)?.label ||
-        row.unitOfMeasure,
+      render: (row) => uomOptions.find((u) => u.value === row.unitOfMeasure)?.label || row.unitOfMeasure,
     },
     {
       key: "currentStock",
-      label: "Current Stock",
-      sortable: true,
-      filterable: true,
-      className: "font-semibold",
+      label: "Stock",
+      className: "text-left font-semibold",
+      render: (row) => row.currentStock.toLocaleString(),
     },
     {
       key: "reorderLevel",
-      label: "Reorder Level",
-      sortable: true,
-      filterable: true,
+      label: "Reorder Lvl",
+      className: "text-left text-muted-foreground",
     },
     {
       key: "status",
       label: "Status",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: statusOptions,
-      render: (row) => getStatusBadge(row.status),
+      render: (row) => {
+        const variants: Record<string, any> = {
+          critical: "destructive",
+          low: "warning",
+          adequate: "success",
+          overstocked: "info",
+        };
+        const statusLabel = row.status.charAt(0).toUpperCase() + row.status.slice(1);
+        return <Badge variant={variants[row.status]}>{statusLabel}</Badge>;
+      },
+    },
+    {
+      key: "created_by",
+      label: "Created By",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+    },
+    {
+      key: "updated_at",
+      label: "Updated At",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+      render: (row) => row.updated_at ? new Date(row.updated_at).toLocaleDateString() : "-",
     },
   ];
 
   const renderActions = (record: BufferRecord) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="p-2">
-        <div className="flex flex-col gap-2 w-full">
-          {/* Edit Button */}
-          <EditModal<BufferRecord>
-            title="Edit Buffer"
-            description="Update buffer details"
-            fields={editFields}
-            data={record}
-            onSubmit={(data) =>
-              dispatch({ type: "UPDATE_RECORD", payload: data as BufferRecord })
-            }
-            triggerLabel="Edit"
-            triggerSize="default"
-            submitLabel="Update Buffer"
-            size="lg"
-          />
-          {/* Delete Button */}
-          <DeleteModal
-            title="Delete Buffer"
-            description={`Are you sure you want to delete the buffer "${record.name}"? This action cannot be undone.`}
-            onSubmit={() =>
-              dispatch({ type: "DELETE_RECORD", payload: record.id })
-            }
-            triggerLabel="Delete"
-            triggerSize="default"
-          />
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <ActionMenu>
+      <EditModal<BufferRecord>
+        title="Edit Buffer"
+        description="Update buffer details"
+        fields={editFields}
+        data={record}
+        onSubmit={(data) =>
+          dispatch({ type: "UPDATE_RECORD", payload: data as BufferRecord })
+        }
+        triggerLabel="Edit"
+        submitLabel="Update Buffer"
+      />
+      <DeleteModal
+        title="Delete Buffer"
+        description={`Are you sure you want to delete the buffer "${record.shortDescription}"? This action cannot be undone.`}
+        onSubmit={() =>
+          dispatch({ type: "DELETE_RECORD", payload: record.id })
+        }
+        triggerLabel="Delete"
+      />
+    </ActionMenu>
   );
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Stock Buffering</h1>
-            <p className="page-description">
-              Monitor buffer levels and reorder points
-            </p>
-          </div>
-          <AddModal<BufferRecord>
-            title="New Buffer Entry"
-            fields={editFields.filter((f) => !f.disabled)}
-            onSubmit={(data) =>
-              dispatch({
-                type: "ADD_RECORD",
-                payload: { ...data, id: crypto.randomUUID() } as BufferRecord,
-              })
-            }
-            triggerLabel="New Buffer"
-            submitLabel="Add"
-            size="lg"
-          />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Stock Buffering</h1>
+          <p className="page-description">Monitor buffer levels and reorder points</p>
         </div>
+        <AddModal<BufferRecord>
+          title="New Buffer Entry"
+          fields={editFields.filter((f) => !f.disabled)}
+          onSubmit={(data) =>
+            dispatch({
+              type: "ADD_RECORD",
+              payload: { ...data, id: Date.now().toString() } as BufferRecord,
+            })
+          }
+          triggerLabel="New Buffer"
+          submitLabel="Add Buffer"
+          size="lg"
+        />
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="stat-label">Critical</p>
-              <p className="stat-value">
-                {state.records.filter((r) => r.status === "critical").length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Low Stock</p>
-              <p className="stat-value">
-                {state.records.filter((r) => r.status === "low").length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <AlertTriangle className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Adequate</p>
-              <p className="stat-value">
-                {state.records.filter((r) => r.status === "adequate").length}
-              </p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Critical"
+          value={state.records.filter((r) => r.status === "critical").length}
+          contentType="alert"
+          variant="destructive"
+        />
+        <StatCard
+          label="Low Stock"
+          value={state.records.filter((r) => r.status === "low").length}
+          contentType="low-stock"
+          variant="warning"
+        />
+        <StatCard
+          label="Adequate"
+          value={state.records.filter((r) => r.status === "adequate").length}
+          contentType="check"
+          variant="success"
+        />
       </div>
+
       <DataTable
         data={state.records}
         columns={columns}
         searchPlaceholder="Search by PSC, description, barcode..."
         actions={renderActions}
-        pageSize={10}
+        defaultPageSize={10}
       />
     </div>
   );

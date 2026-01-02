@@ -1,22 +1,10 @@
+import { StatCard } from "@/components/dashboard/StatCard";
 import AddModal, { AddField } from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { CheckCircle, Clock, MoreHorizontal, Package, Search } from "lucide-react";
+import { ActionMenu } from "@/components/table/ActionMenu";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
+import { CheckCircle, Clock, Package } from "lucide-react";
 import { useReducer } from "react";
 
 interface ReturnRecord {
@@ -30,6 +18,10 @@ interface ReturnRecord {
   status: "pending" | "processed" | "approved";
   returnDate: string;
   processedBy: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
 }
 
 type State = {
@@ -44,9 +36,9 @@ type Action =
   | { type: "UPDATE_RECORD"; payload: ReturnRecord };
 
 const initialRecords: ReturnRecord[] = [
-  { id: "1", referenceNo: "RT-2024-001", customer: "Customer A", orderRef: "ORD-5001", itemCount: 2, totalQuantity: 100, status: "processed", returnDate: "2024-01-15", processedBy: "John Smith" },
-  { id: "2", referenceNo: "RT-2024-002", customer: "Customer B", orderRef: "ORD-5002", itemCount: 1, totalQuantity: 50, status: "pending", returnDate: "2024-01-16", processedBy: "-" },
-  { id: "3", referenceNo: "RT-2024-003", customer: "Customer C", orderRef: "ORD-5003", itemCount: 5, totalQuantity: 300, status: "approved", returnDate: "2024-01-14", processedBy: "Jane Doe" },
+  { id: "1", referenceNo: "RT-2024-001", customer: "Customer A", orderRef: "ORD-5001", itemCount: 2, totalQuantity: 100, status: "processed", returnDate: "2024-01-15", processedBy: "John Smith", created_by: "Admin", created_at: "2024-01-14T10:00:00Z", updated_at: "2024-01-15T11:00:00Z" },
+  { id: "2", referenceNo: "RT-2024-002", customer: "Customer B", orderRef: "ORD-5002", itemCount: 1, totalQuantity: 50, status: "pending", returnDate: "2024-01-16", processedBy: "-", created_by: "Jane Doe", created_at: "2024-01-16T09:00:00Z", updated_at: "2024-01-16T09:00:00Z" },
+  { id: "3", referenceNo: "RT-2024-003", customer: "Customer C", orderRef: "ORD-5003", itemCount: 5, totalQuantity: 300, status: "approved", returnDate: "2024-01-14", processedBy: "Jane Doe", created_by: "Admin", created_at: "2024-01-12T14:20:00Z", updated_at: "2024-01-14T15:00:00Z" },
 ];
 
 const reducer = (state: State, action: Action): State => {
@@ -59,14 +51,25 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         records: [
-          { ...action.payload, status: "pending", processedBy: "-" },
+          { 
+            ...action.payload, 
+            status: "pending", 
+            processedBy: "-",
+            created_at: new Date().toISOString(),
+            created_by: "Current User",
+            updated_at: new Date().toISOString(),
+          },
           ...state.records,
         ],
       };
     case "UPDATE_RECORD":
       return {
         ...state,
-        records: state.records.map((r) => r.id === action.payload.id ? action.payload : r),
+        records: state.records.map((r) => r.id === action.payload.id ? {
+          ...action.payload,
+          updated_at: new Date().toISOString(),
+          updated_by: "Current User"
+        } : r),
       };
     default:
       return state;
@@ -120,11 +123,48 @@ const Returns = () => {
     );
   };
 
-  const filteredRecords = state.records.filter(
-    r =>
-      r.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.customer.toLowerCase().includes(state.searchQuery.toLowerCase())
-  );
+  const columns: ColumnDef<ReturnRecord>[] = [
+    {
+      key: "referenceNo",
+      label: "Reference No.",
+      className: "font-mono font-medium",
+    },
+    { key: "customer", label: "Customer" },
+    {
+      key: "orderRef",
+      label: "Order Ref",
+      className: "font-mono text-sm",
+    },
+    { key: "itemCount", label: "Items" },
+    {
+      key: "totalQuantity",
+      label: "Total Qty",
+      className: "font-semibold",
+      render: (row) => row.totalQuantity.toLocaleString(),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: "returnDate",
+      label: "Return Date",
+      className: "text-muted-foreground",
+    },
+    { key: "processedBy", label: "Processed By" },
+    {
+      key: "created_by",
+      label: "Created By",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+    },
+    {
+      key: "updated_at",
+      label: "Updated",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+      render: (row) => row.updated_at ? new Date(row.updated_at).toLocaleDateString() : "-",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -160,123 +200,51 @@ const Returns = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">Today's Returns</p>
-              <p className="stat-value">50</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Clock className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Pending</p>
-              <p className="stat-value">5</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <CheckCircle className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Approved</p>
-              <p className="stat-value">45</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Today's Returns"
+          value="50"
+          icon={Package}
+          variant="primary"
+        />
+        <StatCard
+          label="Pending"
+          value="5"
+          icon={Clock}
+          variant="warning"
+        />
+        <StatCard
+          label="Approved"
+          value="45"
+          icon={CheckCircle}
+          variant="success"
+        />
       </div>
 
-      {/* Search */}
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by reference or customer..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
+      <DataTable
+        data={state.records}
+        columns={columns}
+        searchPlaceholder="Search by reference or customer..."
+        actions={(record) => (
+          <ActionMenu>
+            <EditModal<ReturnRecord>
+              title="Edit Return"
+              description="Update return record"
+              fields={editReturnFields}
+              data={record}
+              onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ReturnRecord })}
+              triggerLabel="Edit"
+              submitLabel="Update Return"
+              size="lg"
             />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Reference No.</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Order Ref</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Total Qty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Return Date</TableHead>
-              <TableHead>Processed By</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRecords.map(record => (
-              <TableRow key={record.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{record.referenceNo}</TableCell>
-                <TableCell>{record.customer}</TableCell>
-                <TableCell className="font-mono text-sm">{record.orderRef}</TableCell>
-                <TableCell className="text-right">{record.itemCount}</TableCell>
-                <TableCell className="text-right font-semibold">{record.totalQuantity.toLocaleString()}</TableCell>
-                <TableCell>{getStatusBadge(record.status)}</TableCell>
-                <TableCell className="text-muted-foreground">{record.returnDate}</TableCell>
-                <TableCell>{record.processedBy}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-
-                    <DropdownMenuContent align="end" className="p-2">
-                      <div className="flex flex-col gap-2 w-full">
-                        {/* Edit Button */}
-                        <EditModal<ReturnRecord>
-                          title="Edit Return"
-                          description="Update return record"
-                          fields={editReturnFields}
-                          data={record}
-                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ReturnRecord })}
-                          triggerLabel="Edit"
-                          triggerSize="default"
-                          submitLabel="Update Return"
-                          size="lg"
-                        />
-
-                        {/* Delete Button */}
-                        <DeleteModal
-                          title="Delete Return"
-                          description={`Are you sure you want to delete the return record "${record.referenceNo}"? This action cannot be undone.`}
-                          onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-                          triggerLabel="Delete"
-                          triggerSize="default"
-                        />
-                      </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            <DeleteModal
+              title="Delete Return"
+              description={`Are you sure you want to delete the return record "${record.referenceNo}"? This action cannot be undone.`}
+              onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
+      />
     </div>
   );
 };

@@ -1,415 +1,353 @@
-import AddModal from "@/components/modals/AddModal";
+/**
+ * Adjustments Page - Refactored
+ * 
+ * Features:
+ * ✅ Standardized StatCards
+ * ✅ DataTable with fixed pagination
+ * ✅ Complete Adjustment schema with audit columns
+ * ✅ ActionMenu for operations
+ */
+
+import { StatCard } from "@/components/dashboard/StatCard";
+import AddModal, { AddField } from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Adjustment } from "@/types/database";
 import { format } from "date-fns";
-import { MoreHorizontal, Settings } from "lucide-react";
-import { useReducer } from "react";
+import { useState } from "react";
 
-interface AdjustmentRecord {
-  id: string;
-  referenceNo: string;
-  adjDate: string;
-  sourceRefNo: string;
-  category: string;
-  warehouse: string;
-  status: "draft" | "pending" | "approved" | "rejected";
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
+/**
+ * Extended Adjustment interface for UI display
+ */
+interface AdjustmentDisplay extends Adjustment {
+  product_name?: string;
+  warehouse_name?: string;
+  location_name?: string;
+  adjusted_by_name?: string;
+  approved_by_name?: string;
+  created_by_name?: string;
+  updated_by_name?: string;
+  status: string;
   [key: string]: unknown;
 }
 
-type State = {
-  records: AdjustmentRecord[];
-};
-
-type Action =
-  | { type: "DELETE_RECORD"; payload: string }
-  | { type: "ADD_RECORD"; payload: AdjustmentRecord }
-  | { type: "UPDATE_RECORD"; payload: AdjustmentRecord };
-
-const warehouseOptions = [
-  { value: "main", label: "Main Warehouse" },
-  { value: "secondary", label: "Secondary Warehouse" },
-  { value: "outlet", label: "Outlet Store" },
-];
-
-const categoryOptions = [
-  { value: "electronics", label: "Electronics" },
-  { value: "furniture", label: "Furniture" },
-  { value: "clothing", label: "Clothing" },
-  { value: "food", label: "Food & Beverage" },
-];
-
-const statusOptions = [
-  { value: "draft", label: "Draft" },
-  { value: "pending", label: "Pending" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-];
-
-const initialRecords: AdjustmentRecord[] = [
-  {
-    id: "1",
-    referenceNo: "ADJ-2025-001",
-    adjDate: "2025-12-31",
-    sourceRefNo: "PO-2025-100",
-    category: "electronics",
-    warehouse: "main",
-    status: "approved",
-    createdBy: "admin",
-    createdAt: "2025-12-30 09:00",
-    updatedBy: "manager",
-    updatedAt: "2025-12-31 10:00",
-  },
-  {
-    id: "2",
-    referenceNo: "ADJ-2025-002",
-    adjDate: "2025-12-30",
-    sourceRefNo: "SO-2025-050",
-    category: "furniture",
-    warehouse: "secondary",
-    status: "pending",
-    createdBy: "warehouse_user",
-    createdAt: "2025-12-29 14:00",
-    updatedBy: "warehouse_user",
-    updatedAt: "2025-12-30 08:00",
-  },
-  {
-    id: "3",
-    referenceNo: "ADJ-2025-003",
-    adjDate: "2025-12-29",
-    sourceRefNo: "RET-2025-010",
-    category: "clothing",
-    warehouse: "outlet",
-    status: "draft",
-    createdBy: "staff",
-    createdAt: "2025-12-28 11:00",
-    updatedBy: "staff",
-    updatedAt: "2025-12-29 15:00",
-  },
-];
-
-const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "DELETE_RECORD":
-      return {
-        ...state,
-        records: state.records.filter((r) => r.id !== action.payload),
-      };
-    case "ADD_RECORD":
-      return { ...state, records: [action.payload, ...state.records] };
-    case "UPDATE_RECORD":
-      return {
-        ...state,
-        records: state.records.map((r) =>
-          r.id === action.payload.id ? action.payload : r
-        ),
-      };
-    default:
-      return state;
-  }
-};
-
 export default function Adjustments() {
-  const [state, dispatch] = useReducer(reducer, { records: initialRecords });
+  const [adjustments, setAdjustments] = useState<AdjustmentDisplay[]>([
+    {
+      id: 1,
+      adjustment_no: "ADJ-2025-001",
+      product_id: 101,
+      product_name: "iPhone 15",
+      warehouse_id: 1,
+      warehouse_name: "Main Warehouse",
+      location_id: 5,
+      location_name: "A-01-01",
+      previous_qty: 50,
+      adjusted_qty: 48,
+      adjustment_type: "decrease",
+      category: "damage",
+      reason: "Damaged during handling",
+      cost_impact: -1598.00,
+      status: "approved",
+      adjusted_by: 2,
+      adjusted_by_name: "John Operator",
+      approved_by: 1,
+      approved_by_name: "Admin User",
+      approved_at: "2025-01-02T10:00:00Z",
+      created_by: 2,
+      created_by_name: "John Operator",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2025-01-02T09:00:00Z",
+      updated_at: "2025-01-02T10:00:00Z",
+    },
+    {
+      id: 2,
+      adjustment_no: "ADJ-2025-002",
+      product_id: 205,
+      product_name: "Office Chair",
+      warehouse_id: 2,
+      warehouse_name: "Regional Hub",
+      location_id: 12,
+      location_name: "B-05-02",
+      previous_qty: 120,
+      adjusted_qty: 125,
+      adjustment_type: "increase",
+      category: "physical_count",
+      reason: "Found extra stock during cycle count",
+      cost_impact: 450.00,
+      status: "pending",
+      adjusted_by: 3,
+      adjusted_by_name: "Jane Storekeeper",
+      created_by: 3,
+      created_by_name: "Jane Storekeeper",
+      updated_by: 3,
+      updated_by_name: "Jane Storekeeper",
+      created_at: "2025-01-02T11:30:00Z",
+      updated_at: "2025-01-02T11:30:00Z",
+    },
+    {
+      id: 3,
+      adjustment_no: "ADJ-2025-003",
+      product_id: 301,
+      product_name: "Laptop HP",
+      warehouse_id: 1,
+      warehouse_name: "Main Warehouse",
+      location_id: 8,
+      location_name: "A-03-04",
+      previous_qty: 15,
+      adjusted_qty: 0,
+      adjustment_type: "decrease",
+      category: "theft",
+      reason: "Missing from shelf, investigation ongoing",
+      cost_impact: -12000.00,
+      status: "pending",
+      adjusted_by: 2,
+      adjusted_by_name: "John Operator",
+      created_by: 2,
+      created_by_name: "John Operator",
+      updated_by: 2,
+      updated_by_name: "John Operator",
+      created_at: "2025-01-01T16:00:00Z",
+      updated_at: "2025-01-01T16:00:00Z",
+    }
+  ]);
 
-  const getStatusBadge = (status: AdjustmentRecord["status"]) => {
-    const config = {
-      draft: "bg-muted text-muted-foreground",
-      pending: "bg-warning/20 text-warning",
-      approved: "bg-success/20 text-success",
-      rejected: "bg-destructive/20 text-destructive",
-    };
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config[status]}`}
-      >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const editFields: EditField<AdjustmentRecord>[] = [
-    {
-      label: "Reference No",
-      name: "referenceNo",
-      type: "text",
-      disabled: true,
+  const columns: ColumnDef<AdjustmentDisplay>[] = [
+    { 
+      key: "adjustment_no", 
+      label: "Ref No", 
+      className: "font-mono font-medium" 
     },
-    { label: "Adjustment Date", name: "adjDate", type: "text", required: true },
-    {
-      label: "Source Ref #",
-      name: "sourceRefNo",
-      type: "text",
-      required: false,
+    { 
+      key: "created_at", 
+      label: "Date",
+      render: (row) => format(new Date(row.created_at), "yyyy-MM-dd")
     },
-    {
-      label: "Category",
-      name: "category",
-      type: "select",
-      required: true,
-      options: categoryOptions,
+    { 
+      key: "product_name", 
+      label: "Product" 
     },
-    {
-      label: "Warehouse",
-      name: "warehouse",
-      type: "select",
-      required: true,
-      options: warehouseOptions,
-    },
-    {
-      label: "Status",
-      name: "status",
-      type: "select",
-      required: true,
-      options: statusOptions,
-    },
-  ];
-
-  const columns: ColumnDef<AdjustmentRecord>[] = [
-    {
-      key: "referenceNo",
-      label: "Reference No",
-      sortable: true,
-      filterable: true,
-      className: "font-mono font-medium",
-    },
-    {
-      key: "adjDate",
-      label: "Adj Date",
-      sortable: true,
-      filterable: true,
-      filterType: "date",
-    },
-
-    {
-      key: "sourceRefNo",
-      label: "Source Ref #",
-      sortable: true,
-      filterable: true,
-      className: "font-mono",
+    { 
+      key: "warehouse_name", 
+      label: "Warehouse" 
     },
     {
       key: "category",
       label: "Category",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: categoryOptions,
-      render: (row) =>
-        categoryOptions.find((c) => c.value === row.category)?.label ||
-        row.category,
+      render: (row) => {
+        const labels: Record<string, string> = {
+          physical_count: "Cycle Count",
+          damage: "Damage",
+          theft: "Theft/Loss",
+          correction: "Correction",
+          expiry: "Expired"
+        };
+        return labels[row.category] || row.category;
+      }
     },
     {
-      key: "warehouse",
-      label: "Warehouse",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: warehouseOptions,
-      render: (row) =>
-        warehouseOptions.find((w) => w.value === row.warehouse)?.label ||
-        row.warehouse,
+      key: "adjustment_type",
+      label: "Change",
+      render: (row) => {
+        const diff = Math.abs(row.adjusted_qty - row.previous_qty);
+        return (
+          <Badge variant={row.adjustment_type === "increase" ? "success" : "destructive"}>
+            {row.adjustment_type === "increase" ? "+" : "-"}{diff}
+          </Badge>
+        );
+      }
+    },
+    { 
+      key: "cost_impact", 
+      label: "Impact",
+      className: "text-left",
+      render: (row) => (
+        <span className={row.cost_impact && row.cost_impact >= 0 ? "text-success" : "text-destructive"}>
+          {row.cost_impact ? `$${Math.abs(row.cost_impact).toLocaleString()}` : "-"}
+        </span>
+      )
     },
     {
       key: "status",
       label: "Status",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: statusOptions,
-      render: (row) => getStatusBadge(row.status),
+      render: (row) => {
+        const variants: Record<string, any> = {
+          pending: "warning",
+          approved: "success",
+          rejected: "destructive",
+          draft: "secondary",
+        };
+        return <Badge variant={variants[row.status]}>{row.status}</Badge>;
+      },
     },
-    { key: "createdBy", label: "Created By", sortable: true, filterable: true },
-    {
-      key: "createdAt",
-      label: "Created",
-      sortable: true,
-      filterable: true,
-      filterType: "date",
+    { 
+      key: "created_by_name", 
+      label: "Created By",
+      className: "text-sm text-muted-foreground hidden 2xl:table-cell"
     },
-
-    { key: "updatedBy", label: "Updated By", sortable: true, filterable: true },
-    {
-      key: "updatedAt",
+    { 
+      key: "created_at", 
+      label: "Created At",
+      className: "text-sm text-muted-foreground hidden 2xl:table-cell",
+      render: (row) => format(new Date(row.created_at), "yyyy-MM-dd HH:mm")
+    },
+    { 
+      key: "updated_by_name", 
+      label: "Updated By",
+      className: "text-sm text-muted-foreground hidden xl:table-cell"
+    },
+    { 
+      key: "updated_at", 
       label: "Updated At",
-      sortable: true,
-      className: "text-muted-foreground text-sm",
+      className: "text-sm text-muted-foreground hidden xl:table-cell",
+      render: (row) => format(new Date(row.updated_at), "yyyy-MM-dd HH:mm")
     },
   ];
 
-  const renderActions = (record: AdjustmentRecord) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
+  const addFields: AddField<AdjustmentDisplay>[] = [
+    { label: "Product", name: "product_id", type: "select", required: true, options: [
+      { value: "101", label: "iPhone 15" },
+      { value: "205", label: "Office Chair" },
+    ]},
+    { label: "Warehouse", name: "warehouse_id", type: "select", required: true, options: [
+      { value: "1", label: "Main Warehouse" },
+      { value: "2", label: "Regional Hub" },
+    ]},
+    { label: "Category", name: "category", type: "select", required: true, options: [
+      { value: "physical_count", label: "Physical Count" },
+      { value: "damage", label: "Damage" },
+      { value: "theft", label: "Theft/Loss" },
+      { value: "correction", label: "Correction" },
+    ]},
+    { label: "Previous Qty", name: "previous_qty", type: "number", required: true },
+    { label: "New Qty", name: "adjusted_qty", type: "number", required: true },
+    { label: "Reason", name: "reason", type: "textarea", required: true },
+  ];
 
-      <DropdownMenuContent align="end" className="p-2">
-        <div className="flex flex-col gap-2 w-full">
-          {/* Edit Button */}
-          <EditModal<AdjustmentRecord>
-            title="Edit Adjustment"
-            description="Update adjustment details"
-            fields={editFields}
-            data={record}
-            onSubmit={(data) =>
-              dispatch({
-                type: "UPDATE_RECORD",
-                payload: data as AdjustmentRecord,
-              })
-            }
-            triggerLabel="Edit"
-            triggerSize="default"
-            submitLabel="Update Adjustment"
-            size="lg"
-          />
+  const editFields: EditField<AdjustmentDisplay>[] = [...addFields];
 
-          {/* Delete Button */}
-          <DeleteModal
-            title="Delete Adjustment"
-            description={`Are you sure you want to delete the adjustment "${record.id}"? This action cannot be undone.`}
-            onSubmit={() =>
-              dispatch({ type: "DELETE_RECORD", payload: record.id })
-            }
-            triggerLabel="Delete"
-            triggerSize="default"
-          />
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  const handleCreate = (data: Partial<AdjustmentDisplay>) => {
+    // Logic to calculate type and impact would go here
+    const diff = (data.adjusted_qty || 0) - (data.previous_qty || 0);
+    const type = diff >= 0 ? "increase" : "decrease";
+    
+    const newAdj: AdjustmentDisplay = {
+      ...data as AdjustmentDisplay,
+      id: Date.now(),
+      adjustment_no: `ADJ-${new Date().getFullYear()}-${String(adjustments.length + 1).padStart(3, "0")}`,
+      adjustment_type: type,
+      status: "pending",
+      product_name: "Selected Product", // Mock
+      warehouse_name: "Selected Warehouse", // Mock
+      adjusted_by_name: "CurrentUser",
+      created_by_name: "CurrentUser",
+      updated_by_name: "CurrentUser",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      cost_impact: diff * 100, // Mock calculation
+      created_by: 1,
+      updated_by: 1,
+      adjusted_by: 1,
+      product_id: Number(data.product_id),
+      warehouse_id: Number(data.warehouse_id),
+      location_id: 1,
+      reason: data.reason || "",
+      category: data.category || "correction",
+    };
+    setAdjustments([newAdj, ...adjustments]);
+  };
+
+  const handleUpdate = (id: number, data: Partial<AdjustmentDisplay>) => {
+    setAdjustments(adjustments.map(a => a.id === id ? { ...a, ...data, updated_at: new Date().toISOString() } : a));
+  };
+
+  const handleDelete = (id: number) => {
+    setAdjustments(adjustments.filter(a => a.id !== id));
+  };
+
+  // Stats
+  const stats = {
+    total: adjustments.length,
+    pending: adjustments.filter(a => a.status === "pending").length,
+    thisMonth: adjustments.filter(a => new Date(a.created_at).getMonth() === new Date().getMonth()).length,
+    totalImpact: adjustments.reduce((sum, a) => sum + (a.cost_impact || 0), 0),
+  };
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Inventory Adjustments</h1>
-            <p className="page-description">
-              Manage stock adjustments and inventory corrections
-            </p>
-          </div>
-          <AddModal<AdjustmentRecord>
-            title="New Adjustment"
-            description="Create a new inventory adjustment record"
-            fields={[
-              {
-                label: "Adjustment Date",
-                name: "adjDate",
-                type: "text",
-                required: true,
-                placeholder: "YYYY-MM-DD",
-              },
-              {
-                label: "Source Ref #",
-                name: "sourceRefNo",
-                type: "text",
-                required: false,
-                placeholder: "e.g. PO-2025-100",
-              },
-              {
-                label: "Category",
-                name: "category",
-                type: "select",
-                required: true,
-                options: categoryOptions,
-              },
-              {
-                label: "Warehouse",
-                name: "warehouse",
-                type: "select",
-                required: true,
-                options: warehouseOptions,
-              },
-              {
-                label: "Status",
-                name: "status",
-                type: "select",
-                required: true,
-                options: statusOptions,
-              },
-            ]}
-            onSubmit={(data) => {
-              const now = format(new Date(), "yyyy-MM-dd HH:mm");
-              dispatch({
-                type: "ADD_RECORD",
-                payload: {
-                  ...data,
-                  id: crypto.randomUUID(),
-                  referenceNo: `ADJ-${new Date().getFullYear()}-${String(
-                    state.records.length + 1
-                  ).padStart(3, "0")}`,
-                  createdBy: "admin",
-                  createdAt: now,
-                  updatedBy: "admin",
-                  updatedAt: now,
-                } as AdjustmentRecord,
-              });
-            }}
-            triggerLabel="New Adjustment"
-            submitLabel="Create Adjustment"
-            size="lg"
-          />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Inventory Adjustments</h1>
+          <p className="page-description">Manage stock corrections, damages, and cycle counts</p>
         </div>
+        <AddModal<AdjustmentDisplay>
+          title="New Adjustment"
+          description="Create a new inventory adjustment record"
+          fields={addFields}
+          initialData={{} as AdjustmentDisplay}
+          onSubmit={handleCreate}
+          triggerLabel="New Adjustment"
+          submitLabel="Create Adjustment"
+          size="lg"
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Settings className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">Total Adjustments</p>
-              <p className="stat-value">{state.records.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Settings className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Pending</p>
-              <p className="stat-value">
-                {state.records.filter((r) => r.status === "pending").length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <Settings className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Approved</p>
-              <p className="stat-value">
-                {state.records.filter((r) => r.status === "approved").length}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Adjustments"
+          value={stats.total}
+          contentType="adjustments"
+          variant="primary"
+        />
+        <StatCard
+          label="Pending Approvals"
+          value={stats.pending}
+          contentType="pending"
+          variant="warning"
+        />
+        <StatCard
+          label="This Month"
+          value={stats.thisMonth}
+          contentType="calendar"
+          variant="default"
+        />
+        <StatCard
+          label="Net Value Impact"
+          value={`$${stats.totalImpact.toLocaleString()}`}
+          contentType="value"
+          variant={stats.totalImpact >= 0 ? "success" : "destructive"}
+        />
       </div>
 
       <DataTable
-        data={state.records}
+        data={adjustments}
         columns={columns}
         searchPlaceholder="Search adjustments..."
-        actions={renderActions}
-        pageSize={10}
+        defaultPageSize={10}
+        actions={(row) => (
+          <ActionMenu>
+            <EditModal<AdjustmentDisplay>
+              title="Edit Adjustment"
+              description={`Update ${row.adjustment_no}`}
+              fields={editFields}
+              data={row}
+              onSubmit={(data) => handleUpdate(row.id, data)}
+              triggerLabel="Edit"
+              submitLabel="Save Changes"
+            />
+            <DeleteModal
+              title="Delete Adjustment"
+              description={`Are you sure you want to delete ${row.adjustment_no}?`}
+              onSubmit={() => handleDelete(row.id)}
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
       />
     </div>
   );

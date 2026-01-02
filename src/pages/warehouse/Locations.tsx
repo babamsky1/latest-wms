@@ -1,32 +1,12 @@
 import AddModal, { AddField } from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { Filter, MapPin, MoreHorizontal, Search } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useReducer } from "react";
 
 interface Location {
@@ -42,6 +22,10 @@ interface Location {
   capacity: number;
   usedCapacity: number;
   status: "available" | "full" | "reserved";
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
 }
 
 type State = {
@@ -70,6 +54,9 @@ const initialLocations: Location[] = [
     capacity: 500,
     usedCapacity: 250,
     status: "available",
+    created_by: "Admin",
+    created_at: "2024-01-01T08:00:00Z",
+    updated_at: "2024-01-01T08:00:00Z",
   },
   {
     id: "2",
@@ -83,6 +70,9 @@ const initialLocations: Location[] = [
     capacity: 500,
     usedCapacity: 500,
     status: "full",
+    created_by: "Admin",
+    created_at: "2024-01-01T08:00:00Z",
+    updated_at: "2024-01-01T08:00:00Z",
   },
   {
     id: "3",
@@ -96,6 +86,9 @@ const initialLocations: Location[] = [
     capacity: 1000,
     usedCapacity: 280,
     status: "available",
+    created_by: "Admin",
+    created_at: "2024-01-02T09:00:00Z",
+    updated_at: "2024-01-02T09:00:00Z",
   },
   {
     id: "4",
@@ -109,6 +102,9 @@ const initialLocations: Location[] = [
     capacity: 2000,
     usedCapacity: 1200,
     status: "available",
+    created_by: "Admin",
+    created_at: "2024-01-05T10:00:00Z",
+    updated_at: "2024-01-05T10:00:00Z",
   },
   {
     id: "5",
@@ -122,6 +118,9 @@ const initialLocations: Location[] = [
     capacity: 5000,
     usedCapacity: 1500,
     status: "available",
+    created_by: "Admin",
+    created_at: "2024-01-01T08:00:00Z",
+    updated_at: "2024-01-01T08:00:00Z",
   },
   {
     id: "6",
@@ -135,6 +134,9 @@ const initialLocations: Location[] = [
     capacity: 3000,
     usedCapacity: 0,
     status: "available",
+    created_by: "Admin",
+    created_at: "2024-01-01T08:00:00Z",
+    updated_at: "2024-01-01T08:00:00Z",
   },
   {
     id: "7",
@@ -148,6 +150,9 @@ const initialLocations: Location[] = [
     capacity: 300,
     usedCapacity: 300,
     status: "reserved",
+    created_by: "Admin",
+    created_at: "2024-01-10T11:00:00Z",
+    updated_at: "2024-01-10T11:00:00Z",
   },
 ];
 
@@ -166,7 +171,14 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         locations: [
-          { ...action.payload, status: "available", usedCapacity: 0 },
+          { 
+            ...action.payload, 
+            status: "available", 
+            usedCapacity: 0,
+            created_at: new Date().toISOString(),
+            created_by: "Current User",
+            updated_at: new Date().toISOString(),
+          },
           ...state.locations,
         ],
       };
@@ -174,7 +186,11 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         locations: state.locations.map((l) =>
-          l.id === action.payload.id ? action.payload : l
+          l.id === action.payload.id ? {
+            ...action.payload,
+            updated_at: new Date().toISOString(),
+            updated_by: "Current User"
+          } : l
         ),
       };
     default:
@@ -367,15 +383,67 @@ const Locations = () => {
     );
   };
 
-  const filteredLocations = state.locations.filter((loc) => {
-    const matchesSearch = loc.code
-      .toLowerCase()
-      .includes(state.searchQuery.toLowerCase());
-    const matchesWarehouse =
-      state.warehouseFilter === "all" ||
-      loc.warehouse.toLowerCase().includes(state.warehouseFilter.toLowerCase());
-    return matchesSearch && matchesWarehouse;
-  });
+  const columns: ColumnDef<Location>[] = [
+    {
+      key: "code",
+      label: "Location Code",
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-primary" />
+          <span className="font-mono font-medium">{row.code}</span>
+        </div>
+      ),
+    },
+    {
+      key: "warehouse",
+      label: "Warehouse",
+      render: (row) => (
+        <Badge variant="outline" className="font-normal">
+          {row.warehouse}
+        </Badge>
+      ),
+    },
+    { key: "zone", label: "Zone" },
+    {
+      key: "type",
+      label: "Type",
+      render: (row) => getTypeBadge(row.type),
+    },
+    {
+      key: "capacity",
+      label: "Capacity",
+      render: (row) => {
+        const usagePercent = Math.round((row.usedCapacity / row.capacity) * 100);
+        return (
+          <div className="flex items-center gap-3">
+            <Progress
+              value={usagePercent}
+              className={cn("h-2 w-20", getCapacityColor(usagePercent))}
+            />
+            <span className="text-sm text-muted-foreground w-16">
+              {row.usedCapacity}/{row.capacity}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: "created_by",
+      label: "Created By",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+    },
+    {
+      key: "updated_at",
+      label: "Updated At",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+      render: (row) => row.updated_at ? new Date(row.updated_at).toLocaleDateString() : "-",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -414,141 +482,41 @@ const Locations = () => {
         </div>
       </div>
 
-      <div className="content-section">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="relative flex-1 min-w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by location code..."
-              value={state.searchQuery}
-              onChange={(e) =>
-                dispatch({ type: "SET_SEARCH", payload: e.target.value })
+      <DataTable
+        data={state.locations}
+        columns={columns}
+        searchPlaceholder="Search by location code..."
+        actions={(location) => (
+          <ActionMenu>
+            <EditModal<Location>
+              title="Edit Location"
+              description="Update location details"
+              fields={editLocationFields}
+              data={location}
+              onSubmit={(data) =>
+                dispatch({
+                  type: "UPDATE_LOCATION",
+                  payload: data as Location,
+                })
               }
-              className="pl-10"
+              triggerLabel="Edit"
+              submitLabel="Update Location"
+              size="lg"
             />
-          </div>
-          <Select
-            value={state.warehouseFilter}
-            onValueChange={(v) =>
-              dispatch({ type: "SET_WAREHOUSE_FILTER", payload: v })
-            }
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Warehouse" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Warehouses</SelectItem>
-              <SelectItem value="main">Main Warehouse</SelectItem>
-              <SelectItem value="secondary">Secondary Warehouse</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Location Code</TableHead>
-              <TableHead>Warehouse</TableHead>
-              <TableHead>Zone</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLocations.map((location) => {
-              const usagePercent = Math.round(
-                (location.usedCapacity / location.capacity) * 100
-              );
-              return (
-                <TableRow key={location.id} className="hover:bg-muted/30">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <span className="font-mono font-medium">
-                        {location.code}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-normal">
-                      {location.warehouse}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{location.zone}</TableCell>
-                  <TableCell>{getTypeBadge(location.type)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Progress
-                        value={usagePercent}
-                        className={cn(
-                          "h-2 w-20",
-                          getCapacityColor(usagePercent)
-                        )}
-                      />
-                      <span className="text-sm text-muted-foreground w-16">
-                        {location.usedCapacity}/{location.capacity}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(location.status)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-
-                      <DropdownMenuContent align="end" className="p-2">
-                        <div className="flex flex-col gap-2 w-full">
-                          {/* Edit Button */}
-                          <EditModal<Location>
-                            title="Edit Location"
-                            description="Update location details"
-                            fields={editLocationFields}
-                            data={location}
-                            onSubmit={(data) =>
-                              dispatch({
-                                type: "UPDATE_LOCATION",
-                                payload: data as Location,
-                              })
-                            }
-                            triggerLabel="Edit"
-                            triggerSize="default"
-                            submitLabel="Update Location"
-                            size="lg"
-                          />
-
-                          {/* Delete Button */}
-                          <DeleteModal
-                            title="Delete Location"
-                            description={`Are you sure you want to delete the location "${location.code}"? This action cannot be undone.`}
-                            onSubmit={() =>
-                              dispatch({
-                                type: "DELETE_LOCATION",
-                                payload: location.id,
-                              })
-                            }
-                            triggerLabel="Delete"
-                            triggerSize="default"
-                          />
-                        </div>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+            <DeleteModal
+              title="Delete Location"
+              description={`Are you sure you want to delete the location "${location.code}"? This action cannot be undone.`}
+              onSubmit={() =>
+                dispatch({
+                  type: "DELETE_LOCATION",
+                  payload: location.id,
+                })
+              }
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
+      />
     </div>
   );
 };

@@ -1,23 +1,11 @@
+import { StatCard } from "@/components/dashboard/StatCard";
 import AddModal, { AddField } from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { CheckCircle, Clock, MapPin, MoreHorizontal, Package, Search, Truck } from "lucide-react";
+import { CheckCircle, Clock, MapPin, Package, Truck } from "lucide-react";
 import { useReducer } from "react";
 
 interface ShippingRecord {
@@ -33,6 +21,10 @@ interface ShippingRecord {
   status: "pending" | "picked" | "packed" | "shipped" | "delivered";
   shipDate: string;
   trackingNo: string;
+  created_by?: string;
+  created_at?: string;
+  updated_by?: string;
+  updated_at?: string;
 }
 
 type State = {
@@ -47,11 +39,11 @@ type Action =
   | { type: "UPDATE_RECORD"; payload: ShippingRecord };
 
 const initialRecords: ShippingRecord[] = [
-  { id: "1", shipmentNo: "SHP-2024-001", orderRef: "ORD-5001", customer: "Acme Corp", carrier: "FedEx", destination: "New York, NY", packages: 3, weight: "15.5 kg", status: "shipped", shipDate: "2024-01-15", trackingNo: "FX123456789" },
-  { id: "2", shipmentNo: "SHP-2024-002", orderRef: "ORD-5002", customer: "Tech Solutions", carrier: "UPS", destination: "Los Angeles, CA", packages: 1, weight: "8.2 kg", status: "delivered", shipDate: "2024-01-14", trackingNo: "1Z999999999" },
-  { id: "3", shipmentNo: "SHP-2024-003", orderRef: "ORD-5003", customer: "Global Trade Inc", carrier: "DHL", destination: "Chicago, IL", packages: 5, weight: "45.0 kg", status: "packed", shipDate: "2024-01-16", trackingNo: "-" },
-  { id: "4", shipmentNo: "SHP-2024-004", orderRef: "ORD-5004", customer: "Retail Plus", carrier: "FedEx", destination: "Miami, FL", packages: 2, weight: "12.3 kg", status: "picked", shipDate: "2024-01-16", trackingNo: "-" },
-  { id: "5", shipmentNo: "SHP-2024-005", orderRef: "ORD-5005", customer: "Distribution Co", carrier: "UPS", destination: "Seattle, WA", packages: 8, weight: "67.8 kg", status: "pending", shipDate: "2024-01-17", trackingNo: "-" },
+  { id: "1", shipmentNo: "SHP-2024-001", orderRef: "ORD-5001", customer: "Acme Corp", carrier: "FedEx", destination: "New York, NY", packages: 3, weight: "15.5 kg", status: "shipped", shipDate: "2024-01-15", trackingNo: "FX123456789", created_by: "Admin", created_at: "2024-01-14T09:00:00Z", updated_at: "2024-01-15T10:00:00Z" },
+  { id: "2", shipmentNo: "SHP-2024-002", orderRef: "ORD-5002", customer: "Tech Solutions", carrier: "UPS", destination: "Los Angeles, CA", packages: 1, weight: "8.2 kg", status: "delivered", shipDate: "2024-01-14", trackingNo: "1Z999999999", created_by: "John Doe", created_at: "2024-01-13T14:20:00Z", updated_at: "2024-01-14T16:00:00Z" },
+  { id: "3", shipmentNo: "SHP-2024-003", orderRef: "ORD-5003", customer: "Global Trade Inc", carrier: "DHL", destination: "Chicago, IL", packages: 5, weight: "45.0 kg", status: "packed", shipDate: "2024-01-16", trackingNo: "-", created_by: "Jane Smith", created_at: "2024-01-15T08:00:00Z", updated_at: "2024-01-16T09:00:00Z" },
+  { id: "4", shipmentNo: "SHP-2024-004", orderRef: "ORD-5004", customer: "Retail Plus", carrier: "FedEx", destination: "Miami, FL", packages: 2, weight: "12.3 kg", status: "picked", shipDate: "2024-01-16", trackingNo: "-", created_by: "Mike Ross", created_at: "2024-01-16T08:30:00Z", updated_at: "2024-01-16T09:15:00Z" },
+  { id: "5", shipmentNo: "SHP-2024-005", orderRef: "ORD-5005", customer: "Distribution Co", carrier: "UPS", destination: "Seattle, WA", packages: 8, weight: "67.8 kg", status: "pending", shipDate: "2024-01-17", trackingNo: "-", created_by: "Admin", created_at: "2024-01-16T15:45:00Z", updated_at: "2024-01-16T15:45:00Z" },
 ];
 
 const reducer = (state: State, action: Action): State => {
@@ -64,13 +56,24 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         records: [
-          { ...action.payload, status: "pending", trackingNo: "-" },
+          { 
+            ...action.payload, 
+            status: "pending", 
+            trackingNo: "-",
+            created_at: new Date().toISOString(),
+            created_by: "Current User",
+            updated_at: new Date().toISOString()
+          },
           ...state.records,
         ],
       };    case "UPDATE_RECORD":
       return {
         ...state,
-        records: state.records.map((r) => r.id === action.payload.id ? action.payload : r),
+        records: state.records.map((r) => r.id === action.payload.id ? {
+          ...action.payload,
+          updated_at: new Date().toISOString(),
+          updated_by: "Current User"
+        } : r),
       };    default:
       return state;
   }
@@ -129,12 +132,57 @@ const Shipping = () => {
     );
   };
 
-  const filteredRecords = state.records.filter(
-    r =>
-      r.shipmentNo.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.customer.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      r.orderRef.toLowerCase().includes(state.searchQuery.toLowerCase())
-  );
+  const columns: ColumnDef<ShippingRecord>[] = [
+    {
+      key: "shipmentNo",
+      label: "Shipment No.",
+      className: "font-mono font-medium",
+    },
+    {
+      key: "orderRef",
+      label: "Order Ref",
+      className: "font-mono text-sm",
+    },
+    { key: "customer", label: "Customer" },
+    {
+      key: "carrier",
+      label: "Carrier",
+      render: (row) => <Badge variant="outline">{row.carrier}</Badge>,
+    },
+    {
+      key: "destination",
+      label: "Destination",
+      render: (row) => (
+        <div className="flex items-center gap-1 text-sm">
+          <MapPin className="h-3 w-3 text-muted-foreground" />
+          {row.destination}
+        </div>
+      ),
+    },
+    { key: "packages", label: "Packages" },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: "trackingNo",
+      label: "Tracking",
+      className: "font-mono text-sm",
+      render: (row) => (row.trackingNo !== "-" ? row.trackingNo : <span className="text-muted-foreground">-</span>),
+    },
+    {
+      key: "created_by",
+      label: "Shipped By",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+    },
+    {
+      key: "updated_at",
+      label: "Updated",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+      render: (row) => row.updated_at ? new Date(row.updated_at).toLocaleDateString() : "-",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -172,143 +220,57 @@ const Shipping = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Package className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Pending Pick</p>
-              <p className="stat-value">8</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">Ready to Ship</p>
-              <p className="stat-value">5</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-info/10">
-              <Truck className="h-5 w-5 text-info" />
-            </div>
-            <div>
-              <p className="stat-label">In Transit</p>
-              <p className="stat-value">12</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <CheckCircle className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Delivered Today</p>
-              <p className="stat-value">23</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Pending Pick"
+          value="8"
+          icon={Package}
+          variant="warning"
+        />
+        <StatCard
+          label="Ready to Ship"
+          value="5"
+          icon={Package}
+          variant="primary"
+        />
+        <StatCard
+          label="In Transit"
+          value="12"
+          icon={Truck}
+          variant="info"
+        />
+        <StatCard
+          label="Delivered Today"
+          value="23"
+          icon={CheckCircle}
+          variant="success"
+        />
       </div>
 
-      {/* Search */}
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by shipment, order, or customer..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
+      <DataTable
+        data={state.records}
+        columns={columns}
+        searchPlaceholder="Search by shipment, order, or customer..."
+        actions={(record) => (
+          <ActionMenu>
+            <EditModal<ShippingRecord>
+              title="Edit Shipping"
+              description="Update shipping record"
+              fields={editShippingFields}
+              data={record}
+              onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ShippingRecord })}
+              triggerLabel="Edit"
+              submitLabel="Update Shipping"
+              size="lg"
             />
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Shipment No.</TableHead>
-              <TableHead>Order Ref</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Carrier</TableHead>
-              <TableHead>Destination</TableHead>
-              <TableHead className="text-right">Packages</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Tracking</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRecords.map(record => (
-              <TableRow key={record.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{record.shipmentNo}</TableCell>
-                <TableCell className="font-mono text-sm">{record.orderRef}</TableCell>
-                <TableCell>{record.customer}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{record.carrier}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1 text-sm">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    {record.destination}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">{record.packages}</TableCell>
-                <TableCell>{getStatusBadge(record.status)}</TableCell>
-                <TableCell className="font-mono text-sm">
-                  {record.trackingNo !== "-" ? record.trackingNo : <span className="text-muted-foreground">-</span>}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-
-                    <DropdownMenuContent align="end" className="p-2">
-                      <div className="flex flex-col gap-2 w-full">
-                        {/* Edit Button */}
-                        <EditModal<ShippingRecord>
-                          title="Edit Shipping"
-                          description="Update shipping record"
-                          fields={editShippingFields}
-                          data={record}
-                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ShippingRecord })}
-                          triggerLabel="Edit"
-                          triggerSize="default"
-                          submitLabel="Update Shipping"
-                          size="lg"
-                        />
-
-                        {/* Delete Button */}
-                        <DeleteModal
-                          title="Delete Shipping"
-                          description={`Are you sure you want to delete the shipping record "${record.shipmentNo}"? This action cannot be undone.`}
-                          onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-                          triggerLabel="Delete"
-                          triggerSize="default"
-                        />
-                      </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            <DeleteModal
+              title="Delete Shipping"
+              description={`Are you sure you want to delete the shipping record "${record.shipmentNo}"? This action cannot be undone.`}
+              onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
+      />
     </div>
   );
 };

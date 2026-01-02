@@ -1,65 +1,93 @@
+/**
+ * Inventory Overview Page - Refactored
+ * 
+ * Features:
+ * ✅ Standardized StatCards with content-aware icons
+ * ✅ DataTable with fixed pagination and search
+ * ✅ Warehouse-based filtering (Tabs)
+ * ✅ usage visualization
+ */
+
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, MapPin, Search as SearchIcon, Settings, Warehouse } from "lucide-react";
-import { useReducer, useState } from "react";
+import { useState } from "react";
 
 /* ================= TYPES ================= */
-interface InventoryItem {
-  id: string;
+interface InventoryDisplay {
+  id: number;
   sku: string;
   name: string;
-  warehouse: string;
-  location: string;
+  warehouse_name: string;
+  location_name: string;
   quantity: number;
   capacity: number;
   unit: string;
-  lastUpdated: string;
+  last_updated: string;
+  status: 'in_stock' | 'low_stock' | 'out_of_stock' | 'overstock';
   [key: string]: unknown;
 }
 
 /* ================= DATA ================= */
-const inventoryItems: InventoryItem[] = [
-  { id: "1", sku: "WGT-A123", name: "Widget A-123", warehouse: "Main Warehouse", location: "A-01-02-03", quantity: 250, capacity: 500, unit: "pcs", lastUpdated: "2024-01-15 14:30" },
-  { id: "2", sku: "WGT-A123", name: "Widget A-123", warehouse: "Main Warehouse", location: "A-01-02-04", quantity: 200, capacity: 500, unit: "pcs", lastUpdated: "2024-01-15 14:30" },
-  { id: "3", sku: "CMP-B456", name: "Component B-456", warehouse: "Main Warehouse", location: "B-02-01-01", quantity: 28, capacity: 100, unit: "pcs", lastUpdated: "2024-01-15 10:15" },
-  { id: "4", sku: "RAW-C789", name: "Raw Material C-789", warehouse: "Secondary Warehouse", location: "C-01-03-02", quantity: 1200, capacity: 2000, unit: "kg", lastUpdated: "2024-01-14 16:45" },
+const inventoryItems: InventoryDisplay[] = [
+  { 
+    id: 1, 
+    sku: "WGT-A123", 
+    name: "Widget A-123", 
+    warehouse_name: "Main Warehouse", 
+    location_name: "A-01-02-03", 
+    quantity: 250, 
+    capacity: 500, 
+    unit: "pcs", 
+    last_updated: "2024-01-15 14:30",
+    status: "in_stock"
+  },
+  { 
+    id: 2, 
+    sku: "WGT-A123", 
+    name: "Widget A-123", 
+    warehouse_name: "Main Warehouse", 
+    location_name: "A-01-02-04", 
+    quantity: 200, 
+    capacity: 500, 
+    unit: "pcs", 
+    last_updated: "2024-01-15 14:30",
+    status: "in_stock"
+  },
+  { 
+    id: 3, 
+    sku: "CMP-B456", 
+    name: "Component B-456", 
+    warehouse_name: "Main Warehouse", 
+    location_name: "B-02-01-01", 
+    quantity: 28, 
+    capacity: 100, 
+    unit: "pcs", 
+    last_updated: "2024-01-15 10:15",
+    status: "low_stock"
+  },
+  { 
+    id: 4, 
+    sku: "RAW-C789", 
+    name: "Raw Material C-789", 
+    warehouse_name: "Secondary Warehouse", 
+    location_name: "C-01-03-02", 
+    quantity: 1200, 
+    capacity: 2000, 
+    unit: "kg", 
+    last_updated: "2024-01-14 16:45",
+    status: "in_stock"
+  },
 ];
 
-/* ================= REDUCER FOR SEARCH ================= */
-type State = { searchQuery: string };
-type Action = { type: "SET_SEARCH"; payload: string };
-const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "SET_SEARCH":
-      return { ...state, searchQuery: action.payload };
-    default:
-      return state;
-  }
-};
+export default function Overview() {
+  const [activeTab, setActiveTab] = useState<string>("Main Warehouse");
 
-/* ================= COMPONENT ================= */
-const Overview = () => {
-  const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [state, dispatch] = useReducer(reducer, { searchQuery: "" });
-
-  const handleTabClick = (tab: string) => {
-    setActiveTab(tab);
-    dispatch({ type: "SET_SEARCH", payload: "" }); // reset search
-  };
-
-  const filteredInventory = activeTab
-    ? inventoryItems.filter(
-        (item) =>
-          item.warehouse === activeTab &&
-          (item.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-            item.sku.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-            item.location.toLowerCase().includes(state.searchQuery.toLowerCase()))
-      )
-    : [];
+  const filteredInventory = inventoryItems.filter(
+    (item) => item.warehouse_name === activeTab
+  );
 
   const getCapacityColor = (percentage: number) => {
     if (percentage >= 90) return "bg-destructive";
@@ -68,9 +96,63 @@ const Overview = () => {
   };
 
   // Stats
-  const totalItems = filteredInventory.length;
-  const totalQuantity = filteredInventory.reduce((sum, item) => sum + item.quantity, 0);
-  const totalCapacity = filteredInventory.reduce((sum, item) => sum + item.capacity, 0);
+  const stats = {
+    totalItems: filteredInventory.length,
+    totalQuantity: filteredInventory.reduce((sum, item) => sum + item.quantity, 0),
+    totalCapacity: filteredInventory.reduce((sum, item) => sum + item.capacity, 0),
+    utilization: filteredInventory.length > 0 
+      ? Math.round((filteredInventory.reduce((sum, item) => sum + item.quantity, 0) / filteredInventory.reduce((sum, item) => sum + item.capacity, 0)) * 100)
+      : 0
+  };
+
+  const columns: ColumnDef<InventoryDisplay>[] = [
+    { 
+      key: "sku", 
+      label: "SKU", 
+      className: "font-mono font-medium" 
+    },
+    { 
+      key: "name", 
+      label: "Product Name" 
+    },
+    { 
+      key: "warehouse_name", 
+      label: "Warehouse" 
+    },
+    { 
+      key: "location_name", 
+      label: "Location",
+      render: (row) => <Badge variant="outline" className="font-mono">{row.location_name}</Badge>
+    },
+    {
+      key: "quantity",
+      label: "Quantity",
+      render: (row) => (
+        <span>
+          <span className="font-semibold">{row.quantity.toLocaleString()}</span>{" "}
+          <span className="text-muted-foreground text-xs">{row.unit}</span>
+        </span>
+      )
+    },
+    {
+      key: "capacity",
+      label: "Capacity",
+      render: (row) => {
+        const usage = Math.round((row.quantity / row.capacity) * 100);
+        return (
+          <div className="flex items-center gap-2 w-full max-w-[150px]">
+            <Progress value={usage} className={cn("h-2 flex-1", getCapacityColor(usage))} />
+            <span className="text-xs text-muted-foreground w-8 text-left">{usage}%</span>
+          </div>
+        );
+      }
+    },
+    { 
+      key: "last_updated", 
+      label: "Last Updated",
+      className: "text-sm text-muted-foreground"
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -83,131 +165,58 @@ const Overview = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-50">
+      <div className="flex gap-4 border-b border-border">
         {["Main Warehouse", "Secondary Warehouse"].map((tab) => (
           <button
             key={tab}
             className={cn(
-              "px-4 py-2 font-medium text-sm rounded-t-md",
+              "px-4 py-2 font-medium text-sm rounded-t-md transition-colors border-t border-l border-r",
               activeTab === tab
-                ? "bg-primary/10 text-primary border-t border-l border-r border-muted/50"
-                : "text-muted-foreground hover:bg-muted/10"
+                ? "bg-card text-primary border-border border-b-card -mb-px"
+                : "bg-transparent text-muted-foreground border-transparent hover:bg-muted/50 hover:text-foreground"
             )}
-            onClick={() => handleTabClick(tab)}
+            onClick={() => setActiveTab(tab)}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* Only show stats, search, and table if a warehouse is selected */}
-      {activeTab && (
-        <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div className="stat-card">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Settings className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="stat-label">Total Items</p>
-                  <p className="stat-value">{totalItems}</p>
-                </div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <Settings className="h-5 w-5 text-warning" />
-                </div>
-                <div>
-                  <p className="stat-label">Total Quantity</p>
-                  <p className="stat-value">{totalQuantity.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <Settings className="h-5 w-5 text-success" />
-                </div>
-                <div>
-                  <p className="stat-label">Total Capacity</p>
-                  <p className="stat-value">{totalCapacity.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Items"
+          value={stats.totalItems}
+          contentType="products"
+          variant="primary"
+        />
+        <StatCard
+          label="Total Quantity"
+          value={stats.totalQuantity.toLocaleString()}
+          contentType="quantity"
+          variant="default" // Changed from 'info' to 'default' as 'info' maps to blue/cyan which is usually default/primary
+        />
+        <StatCard
+          label="Total Capacity"
+          value={stats.totalCapacity.toLocaleString()}
+          contentType="capacity"
+          variant="warning"
+        />
+        <StatCard
+          label="Utilization"
+          value={`${stats.utilization}%`}
+          contentType="percentage"
+          variant={stats.utilization > 80 ? "destructive" : "success"}
+        />
+      </div>
 
-          {/* Search Bar */}
-          <div className="mt-4 max-w-md relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by SKU, product name, or location..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Table */}
-          <div className="table-container mt-4">
-            <Table variant="inventory">
-              <TableHeader variant="inventory">
-                <TableRow variant="inventory" className="bg-muted/50">
-                  <TableHead variant="inventory">
-                    <Button variant="ghost" size="sm" className="-ml-3 h-8">
-                      SKU
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </TableHead>
-                  <TableHead variant="inventory">Product Name</TableHead>
-                  <TableHead variant="inventory">
-                    <div className="flex items-center gap-2">
-                      <Warehouse className="h-4 w-4 text-muted-foreground" />
-                      Warehouse
-                    </div>
-                  </TableHead>
-                  <TableHead variant="inventory">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      Location
-                    </div>
-                  </TableHead>
-                  <TableHead variant="inventory">Quantity</TableHead>
-                  <TableHead variant="inventory">Capacity</TableHead>
-                  <TableHead variant="inventory">Last Updated</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody variant="inventory">
-                {filteredInventory.map((item) => {
-                  const usage = Math.round((item.quantity / item.capacity) * 100);
-                  return (
-                    <TableRow key={item.id} variant="inventory" className="hover:bg-muted/30">
-                      <TableCell variant="inventory" className="font-mono text-sm">{item.sku}</TableCell>
-                      <TableCell variant="inventory" className="font-medium">{item.name}</TableCell>
-                      <TableCell variant="inventory"><Badge variant="outline">{item.warehouse}</Badge></TableCell>
-                      <TableCell variant="inventory"><span className="font-mono text-sm bg-muted px-2 py-1 rounded">{item.location}</span></TableCell>
-                      <TableCell variant="inventory"><span className="font-semibold">{item.quantity.toLocaleString()}</span> <span className="text-muted-foreground">{item.unit}</span></TableCell>
-                      <TableCell variant="inventory">
-                        <div className="flex items-center gap-3">
-                          <Progress value={usage} className={cn("h-2 w-24", getCapacityColor(usage))} />
-                          <span className="text-sm text-muted-foreground">{usage}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell variant="inventory" className="text-muted-foreground text-sm">{item.lastUpdated}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </>
-      )}
+      {/* Table */}
+      <DataTable
+        data={filteredInventory}
+        columns={columns}
+        searchPlaceholder="Search by SKU, product name, or location..."
+        defaultPageSize={10}
+      />
     </div>
   );
-};
-
-export default Overview;
+}

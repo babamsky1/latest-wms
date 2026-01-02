@@ -1,10 +1,6 @@
-import { useState } from "react";
-import { Settings as SettingsIcon, Building2, Bell, Shield, Database, Palette, Globe, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -13,7 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { Bell, Building2, Database, Globe, Palette, Save, Shield } from "lucide-react";
+import { useState } from "react";
 
 const Settings = () => {
   const [companyName, setCompanyName] = useState("Acme Warehouse Inc.");
@@ -102,7 +102,13 @@ const Settings = () => {
                     <SelectItem value="JPY">JPY (¥)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+            </div>
+          </div>
+        </div>
+          <div className="pt-4 mt-6 border-t flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="h-3 w-3" />
+              Audit Trail: Last changed by Admin on 2024-01-20 14:30
             </div>
           </div>
         </TabsContent>
@@ -149,6 +155,12 @@ const Settings = () => {
                   onCheckedChange={setOrderAlerts}
                 />
               </div>
+            </div>
+          </div>
+          <div className="pt-4 mt-6 border-t flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="h-3 w-3" />
+              Audit Trail: Last changed by Admin on 2024-01-20 14:30
             </div>
           </div>
         </TabsContent>
@@ -201,6 +213,12 @@ const Settings = () => {
               </div>
             </div>
           </div>
+          <div className="pt-4 mt-6 border-t flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="h-3 w-3" />
+              Audit Trail: Last changed by Admin on 2024-01-20 14:30
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="appearance" className="space-y-6">
@@ -248,6 +266,12 @@ const Settings = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+          <div className="pt-4 mt-6 border-t flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="h-3 w-3" />
+              Audit Trail: Last changed by Admin on 2024-01-20 14:30
             </div>
           </div>
         </TabsContent>

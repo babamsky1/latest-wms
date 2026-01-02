@@ -1,6 +1,7 @@
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
@@ -9,16 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Filter, Search, ShoppingCart, TrendingDown } from "lucide-react";
+import { AlertTriangle, Filter, ShoppingCart, TrendingDown } from "lucide-react";
 import { useReducer } from "react";
 
 interface LowStockItem {
@@ -115,6 +108,57 @@ const LowStocks = () => {
   const criticalCount = state.items.filter((i) => i.status === "critical").length;
   const outCount = state.items.filter((i) => i.status === "out").length;
 
+  const columns: ColumnDef<LowStockItem>[] = [
+    {
+      key: "sku",
+      label: "SKU",
+      className: "font-mono font-medium",
+    },
+    {
+      key: "name",
+      label: "Product Name",
+      className: "font-medium",
+    },
+    {
+      key: "category",
+      label: "Category",
+      render: (row) => (
+        <Badge variant="outline" className="font-normal">{row.category}</Badge>
+      ),
+    },
+    {
+      key: "stockLevel",
+      label: "Stock Level",
+      render: (row) => getStockLevel(row.currentStock, row.reorderLevel),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: "reorderQty",
+      label: "Reorder Qty",
+      className: "text-left font-semibold",
+      render: (row) => `${row.reorderQty} ${row.unit}`,
+    },
+    {
+      key: "supplier",
+      label: "Supplier",
+      className: "text-muted-foreground",
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (row) => (
+        <Button variant="outline" size="sm">
+          <ShoppingCart className="h-3 w-3 mr-1" />
+          Reorder
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -126,112 +170,60 @@ const LowStocks = () => {
         </div>
       </div>
 
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <TrendingDown className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Low Stock</p>
-              <p className="stat-value">{lowCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="stat-label">Critical</p>
-              <p className="stat-value">{criticalCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="stat-label">Out of Stock</p>
-              <p className="stat-value">{outCount}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Low Stock"
+          value={lowCount}
+          icon={TrendingDown}
+          variant="warning"
+        />
+        <StatCard
+          label="Critical"
+          value={criticalCount}
+          icon={AlertTriangle}
+          variant="destructive"
+        />
+        <StatCard
+          label="Out of Stock"
+          value={outCount}
+          icon={AlertTriangle}
+          variant="destructive"
+        />
       </div>
 
       <div className="content-section">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="relative flex-1 min-w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by SKU or product name..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
+            {/* Search handled by DataTable */}
+            <div className="flex items-center gap-2">
+              <Select
+                value={state.statusFilter}
+                onValueChange={(v) => dispatch({ type: "SET_STATUS_FILTER", payload: v })}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="low">Low Stock</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="out">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <Select
-            value={state.statusFilter}
-            onValueChange={(v) => dispatch({ type: "SET_STATUS_FILTER", payload: v })}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="low">Low Stock</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="out">Out of Stock</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>SKU</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Stock Level</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Reorder Qty</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredItems.map((item) => (
-              <TableRow key={item.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{item.sku}</TableCell>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-normal">{item.category}</Badge>
-                </TableCell>
-                <TableCell>{getStockLevel(item.currentStock, item.reorderLevel)}</TableCell>
-                <TableCell>{getStatusBadge(item.status)}</TableCell>
-                <TableCell className="text-left font-semibold">
-                  {item.reorderQty} {item.unit}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{item.supplier}</TableCell>
-                <TableCell>
-                  <Button variant="outline" size="sm">
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    Reorder
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={filteredItems}
+        columns={columns}
+        searchPlaceholder="Search by SKU or product name..."
+      />
     </div>
   );
 };

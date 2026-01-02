@@ -1,212 +1,314 @@
+/**
+ * Categories Page - Refactored
+ * 
+ * Features:
+ * ✅ Standardized StatCards
+ * ✅ DataTable with fixed pagination
+ * ✅ Complete Category schema with audit columns
+ * ✅ ActionMenu for operations
+ */
+
+import { StatCard } from "@/components/dashboard/StatCard";
 import AddModal, { AddField } from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
-import { ColumnDef, DataTable } from "@/components/table/DataTable"; // your DataTable
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import { FolderTree, MoreHorizontal, Settings } from "lucide-react";
-import { useReducer } from "react";
+import { ActionMenu } from "@/components/table/ActionMenu";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
+import { Badge } from "@/components/ui/badge";
+import { Category } from "@/types/database";
+import { Folder, FolderTree } from "lucide-react";
+import { useState } from "react";
 
-interface Category {
-  id: string;
-  name: string;
-  productCount: number;
-  status: "active" | "inactive";
-  createdAt: string;
-  [key: string]: string | number | null;
+/**
+ * Extended Category interface for UI display
+ */
+interface CategoryDisplay extends Category {
+  product_count?: number; // Calculated/joined field
+  parent_name?: string; // Joined field
+  created_by_name?: string;
+  updated_by_name?: string;
+  [key: string]: unknown;
 }
 
-type State = {
-  categories: Category[];
-  searchQuery: string;
-};
-
-type Action =
-  | { type: "SET_SEARCH"; payload: string }
-  | { type: "DELETE_CATEGORY"; payload: string }
-  | { type: "ADD_CATEGORY"; payload: Category }
-  | { type: "UPDATE_CATEGORY"; payload: Category };
-
-const initialCategories: Category[] = [
-  { id: "1", name: "Electronics", productCount: 245, status: "active", createdAt: "2024-01-10" },
-  { id: "2", name: "Smartphones", productCount: 89, status: "active", createdAt: "2024-01-10" },
-  { id: "3", name: "Laptops", productCount: 56, status: "active", createdAt: "2024-01-11" },
-  { id: "4", name: "Raw Materials", productCount: 312, status: "active", createdAt: "2024-01-08" },
-  { id: "5", name: "Packaging", productCount: 78, status: "active", createdAt: "2024-01-09" },
-  { id: "6", name: "Machinery Parts", productCount: 156, status: "active", createdAt: "2024-01-12" },
-  { id: "7", name: "Obsolete Items", productCount: 23, status: "inactive", createdAt: "2024-01-05" },
-];
-
-const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "SET_SEARCH":
-      return { ...state, searchQuery: action.payload };
-    case "DELETE_CATEGORY":
-      return { ...state, categories: state.categories.filter((c) => c.id !== action.payload) };
-    case "ADD_CATEGORY":
-      return {
-        ...state,
-        categories: [
-          { ...action.payload, status: "active", productCount: 0, createdAt: new Date().toISOString().split("T")[0] },
-          ...state.categories,
-        ],
-      };
-    case "UPDATE_CATEGORY":
-      return {
-        ...state,
-        categories: state.categories.map((c) => (c.id === action.payload.id ? action.payload : c)),
-      };
-    default:
-      return state;
-  }
-};
-
-const Categories = () => {
-  const [state, dispatch] = useReducer(reducer, { categories: initialCategories, searchQuery: "" });
-
-  // Form fields for Add/Edit
-  const categoryFields: AddField<Category>[] = [
-    { label: "Category Name", name: "name", type: "text", placeholder: "Enter category name", required: true },
-  ];
-
-  const editCategoryFields: EditField<Category>[] = [
-    ...categoryFields,
+export default function Categories() {
+  const [categories, setCategories] = useState<CategoryDisplay[]>([
     {
-      label: "Status",
-      name: "status",
-      type: "select",
-      options: [
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
-      ],
+      id: 1,
+      name: "Electronics",
+      description: "Electronic devices and gadgets",
+      status: "active",
+      product_count: 245,
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-01-10T08:00:00Z",
+      updated_at: "2024-01-10T08:00:00Z",
+      created_by_id: 1,
+      updated_by_id: 1,
     },
-  ];
-
-  // Define columns for DataTable
-  const columns: ColumnDef<Category>[] = [
     {
-      key: "name",
+      id: 2,
+      name: "Smartphones",
+      description: "Mobile phones and accessories",
+      parent_id: 1,
+      parent_name: "Electronics",
+      status: "active",
+      product_count: 89,
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-01-10T09:00:00Z",
+      updated_at: "2024-01-10T09:00:00Z",
+      created_by_id: 1,
+      updated_by_id: 1,
+    },
+    {
+      id: 3,
+      name: "Laptops",
+      description: "Portable computers",
+      parent_id: 1,
+      parent_name: "Electronics",
+      status: "active",
+      product_count: 56,
+      created_by: 2,
+      created_by_name: "John Does",
+      updated_by: 2,
+      updated_by_name: "John Doe",
+      created_at: "2024-01-11T10:30:00Z",
+      updated_at: "2024-01-11T10:30:00Z",
+      created_by_id: 2,
+      updated_by_id: 2,
+    },
+    {
+      id: 4,
+      name: "Raw Materials",
+      description: "Basic materials for production",
+      status: "active",
+      product_count: 312,
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-01-08T14:20:00Z",
+      updated_at: "2024-01-08T14:20:00Z",
+      created_by_id: 1,
+      updated_by_id: 1,
+    },
+    {
+      id: 5,
+      name: "Packaging",
+      description: "Boxes, tape, and packing materials",
+      status: "active",
+      product_count: 78,
+      created_by: 3,
+      created_by_name: "Jane Smith",
+      updated_by: 3,
+      updated_by_name: "Jane Smith",
+      created_at: "2024-01-09T11:45:00Z",
+      updated_at: "2024-01-09T11:45:00Z",
+      created_by_id: 3,
+      updated_by_id: 3,
+    },
+    {
+      id: 6,
+      name: "Obsolete Items",
+      description: "Items no longer in use",
+      status: "inactive",
+      product_count: 23,
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-01-05T09:10:00Z",
+      updated_at: "2024-01-25T16:00:00Z",
+      created_by_id: 1,
+      updated_by_id: 1,
+    }
+  ]);
+
+  const columns: ColumnDef<CategoryDisplay>[] = [
+    { 
+      key: "name", 
       label: "Category Name",
-      sortable: true,
-      filterable: true,
-      filterType: "text",
+      className: "font-medium",
       render: (row) => (
         <div className="flex items-center gap-2">
-          <FolderTree className="h-4 w-4 text-primary" />
-          <span className="font-medium">{row.name}</span>
+          {row.parent_id ? <Folder className="h-4 w-4 text-muted-foreground" /> : <FolderTree className="h-4 w-4 text-primary" />}
+          <span>{row.name}</span>
         </div>
-      ),
+      )
     },
-    { key: "productCount", label: "Products", sortable: true },
+    { key: "description", label: "Description", className: "hidden md:table-cell text-muted-foreground" },
+    { 
+      key: "parent_name", 
+      label: "Parent Category",
+      render: (row) => row.parent_name || "-"
+    },
+    { 
+      key: "product_count", 
+      label: "Products",
+      className: "text-center",
+      render: (row) => <Badge variant="secondary" className="rounded-full px-2">{row.product_count}</Badge>
+    },
     {
       key: "status",
       label: "Status",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "", label: "All" },
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
-      ],
-      render: (row) => (
-        <span className={`status-badge ${row.status === "active" ? "status-active" : "status-inactive"}`}>
-          {row.status}
-        </span>
-      ),
+      render: (row) => {
+        const variants: Record<string, string> = {
+          active: "default",
+          inactive: "secondary",
+        };
+        return <Badge variant={variants[row.status] as any}>{row.status}</Badge>;
+      },
     },
     {
-      key: "createdAt",
-      label: "Created",
-      sortable: true,
-      filterable: true,
-      filterType: "date", // will show date picker
+      key: "created_by_name",
+      label: "Created By",
+      className: "text-sm text-muted-foreground hidden xl:table-cell",
+    },
+    {
+      key: "created_at",
+      label: "Created At",
+      className: "text-sm text-muted-foreground hidden xl:table-cell",
+      render: (row) => new Date(row.created_at).toLocaleDateString(),
+    },
+    {
+      key: "updated_by_name",
+      label: "Updated By",
+      className: "text-sm text-muted-foreground hidden xl:table-cell",
+    },
+    {
+      key: "updated_at",
+      label: "Last Updated",
+      className: "text-sm text-muted-foreground hidden lg:table-cell",
+      render: (row) => new Date(row.updated_at).toLocaleDateString(),
     },
   ];
 
-  // Actions column
-  const actions = (category: Category) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="p-2 w-auto min-w-[120px]">
-        <div className="flex flex-col gap-2 w-full">
-          <EditModal<Category>
-            title="Edit Category"
-            description="Update category details"
-            fields={editCategoryFields}
-            data={category}
-            onSubmit={(data) => dispatch({ type: "UPDATE_CATEGORY", payload: data })}
-            triggerLabel="Edit"
-            triggerSize="default"
-            submitLabel="Update Category"
-            size="lg"
-          />
-          <DeleteModal
-            title="Delete Category"
-            description={`Are you sure you want to delete "${category.name}"? This action cannot be undone.`}
-            onSubmit={() => dispatch({ type: "DELETE_CATEGORY", payload: category.id })}
-            triggerLabel="Delete"
-            triggerSize="default"
-          />
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  const addFields: AddField<CategoryDisplay>[] = [
+    { label: "Category Name", name: "name", type: "text", required: true },
+    { label: "Description", name: "description", type: "textarea" },
+    { label: "Parent Category", name: "parent_id", type: "select", options: [
+      { value: "1", label: "Electronics" },
+      { value: "4", label: "Raw Materials" },
+    ]},
+    { label: "Status", name: "status", type: "select", options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+    ]},
+  ];
+
+  const editFields: EditField<CategoryDisplay>[] = [...addFields];
+
+  // Actions
+  const handleAdd = (data: Partial<CategoryDisplay>) => {
+    const newCategory: CategoryDisplay = {
+      ...data as CategoryDisplay,
+      id: Date.now(),
+      product_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+    };
+    setCategories([newCategory, ...categories]);
+  };
+
+  const handleUpdate = (id: number, data: Partial<CategoryDisplay>) => {
+    setCategories(categories.map(c => c.id === id ? { ...c, ...data, updated_at: new Date().toISOString() } : c));
+  };
+
+  const handleDelete = (id: number) => {
+    setCategories(categories.filter(c => c.id !== id));
+  };
+
+  // Stats
+  const stats = {
+    total: categories.length,
+    active: categories.filter(c => c.status === "active").length,
+    subCategories: categories.filter(c => c.parent_id).length,
+    parentCategories: categories.filter(c => !c.parent_id).length,
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header + Add Button */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Categories</h1>
-          <p className="page-description">Organize products into categories</p>
+          <p className="page-description">Organize products into hierarchical categories</p>
         </div>
-
-        <AddModal<Category>
+        <AddModal<CategoryDisplay>
           title="Add New Category"
           description="Create a new product category"
-          fields={categoryFields}
-          initialData={{
-            id: String(Date.now()),
-            name: "",
-            productCount: 0,
-            status: "active",
-            createdAt: new Date().toISOString().split("T")[0],
-          }}
-          onSubmit={(data) => dispatch({ type: "ADD_CATEGORY", payload: data })}
+          fields={addFields}
+          initialData={{} as CategoryDisplay}
+          onSubmit={handleAdd}
           triggerLabel="Add Category"
           submitLabel="Create Category"
           size="lg"
         />
       </div>
 
-      {/* Stat card */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <Settings className="h-5 w-5 text-primary" />
-            <div>
-              <p className="stat-label">Total Categories</p>
-              <p className="stat-value">{state.categories.length}</p>
-            </div>
-          </div>
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Categories"
+          value={stats.total}
+          contentType="categories"
+          variant="primary"
+          // change={{ value: 4, type: "increase" }}
+        />
+        <StatCard
+          label="Active Categories"
+          value={stats.active}
+          contentType="active"
+          variant="success"
+        />
+        <StatCard
+          label="Top Level"
+          value={stats.parentCategories}
+          contentType="parent-category"
+          variant="default"
+        />
+        <StatCard
+          label="Sub-Categories"
+          value={stats.subCategories}
+          contentType="sub-category"
+          variant="warning"
+        />
       </div>
 
-      {/* DataTable with search, filters, and actions */}
-      <DataTable<Category>
-        data={state.categories}
+      {/* DataTable */}
+      <DataTable
+        data={categories}
         columns={columns}
         searchPlaceholder="Search categories..."
-        actions={actions}
-        pageSize={10}
+        defaultPageSize={10}
+        actions={(row) => (
+          <ActionMenu>
+            <EditModal<CategoryDisplay>
+              title="Edit Category"
+              description={`Update ${row.name}`}
+              fields={editFields}
+              data={row}
+              onSubmit={(data) => handleUpdate(row.id, data)}
+              triggerLabel="Edit"
+              submitLabel="Save Changes"
+            />
+            <DeleteModal
+              title="Delete Category"
+              description={`Are you sure you want to delete ${row.name}?`}
+              onSubmit={() => handleDelete(row.id)}
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
       />
     </div>
   );
-};
-
-export default Categories;
+}

@@ -1,6 +1,7 @@
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,22 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Calendar,
   Download,
   FileText,
   Filter,
   Package,
-  Search,
   TrendingDown,
-  TrendingUp,
+  TrendingUp
 } from "lucide-react";
 import { useState } from "react";
 
@@ -53,18 +45,75 @@ const reportData: ReportItem[] = [
 const InventoryReport = () => {
   const [reportType, setReportType] = useState("stock-summary");
   const [period, setPeriod] = useState("this-month");
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState(""); // Managed by DataTable
 
-  // Filtered data
-  const filteredData = reportData.filter(
-    (item) =>
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtered data logic works best if we pass valid data to DataTable and let it handle search.
+  // Unless we want custom filtering for reportType/period.
+  // reportData is static here, but presumably reportType/period would fetch new data.
+  // We will assume reportData is the "current" data.
 
-  const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0);
-  const totalItems = filteredData.reduce((sum, item) => sum + item.closingStock, 0);
+  const totalValue = reportData.reduce((sum, item) => sum + item.value, 0);
+  const totalItems = reportData.reduce((sum, item) => sum + item.closingStock, 0);
+
+  const columns: ColumnDef<ReportItem>[] = [
+    {
+      key: "sku",
+      label: "SKU",
+      className: "font-mono font-medium",
+    },
+    {
+      key: "name",
+      label: "Product Name",
+      className: "font-medium",
+    },
+    {
+      key: "category",
+      label: "Category",
+      render: (row) => (
+        <Badge variant="outline" className="font-normal">{row.category}</Badge>
+      ),
+    },
+    {
+      key: "openingStock",
+      label: "Opening",
+      className: "text-left",
+      render: (row) => row.openingStock.toLocaleString(),
+    },
+    {
+      key: "stockIn",
+      label: "Stock In",
+      className: "text-left text-success",
+      render: (row) => `+${row.stockIn.toLocaleString()}`,
+    },
+    {
+      key: "stockOut",
+      label: "Stock Out",
+      className: "text-left text-destructive",
+      render: (row) => `-${row.stockOut.toLocaleString()}`,
+    },
+    {
+      key: "adjustments",
+      label: "Adjustments",
+      className: "text-left",
+      render: (row) => (
+        <span className={row.adjustments < 0 ? "text-destructive" : row.adjustments > 0 ? "text-success" : ""}>
+          {row.adjustments !== 0 ? (row.adjustments > 0 ? `+${row.adjustments}` : row.adjustments) : "0"}
+        </span>
+      ),
+    },
+    {
+      key: "closingStock",
+      label: "Closing",
+      className: "text-left font-semibold",
+      render: (row) => row.closingStock.toLocaleString(),
+    },
+    {
+      key: "value",
+      label: "Value",
+      className: "text-left font-semibold",
+      render: (row) => `$${row.value.toLocaleString()}`,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -84,146 +133,77 @@ const InventoryReport = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">Total Items</p>
-              <p className="stat-value">{totalItems.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <TrendingUp className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Stock In</p>
-              <p className="stat-value">
-                {filteredData.reduce((sum, item) => sum + item.stockIn, 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <TrendingDown className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Stock Out</p>
-              <p className="stat-value">
-                {filteredData.reduce((sum, item) => sum + item.stockOut, 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-info/10">
-              <FileText className="h-5 w-5 text-info" />
-            </div>
-            <div>
-              <p className="stat-label">Total Value</p>
-              <p className="stat-value">${totalValue.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Total Items"
+          value={totalItems.toLocaleString()}
+          icon={Package}
+          variant="primary"
+        />
+        <StatCard
+          label="Stock In"
+          value={reportData.reduce((sum, item) => sum + item.stockIn, 0).toLocaleString()}
+          icon={TrendingUp}
+          variant="success"
+        />
+        <StatCard
+          label="Stock Out"
+          value={reportData.reduce((sum, item) => sum + item.stockOut, 0).toLocaleString()}
+          icon={TrendingDown}
+          variant="warning"
+        />
+        <StatCard
+          label="Total Value"
+          value={`$${totalValue.toLocaleString()}`}
+          icon={FileText}
+          variant="info"
+        />
       </div>
 
       {/* Filters */}
       <div className="content-section">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="relative flex-1 min-w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by SKU, name, or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+             {/* Search handled by DataTable */}
+            <div className="flex items-center gap-2">
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Report Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stock-summary">Stock Summary</SelectItem>
+                  <SelectItem value="movement">Stock Movement</SelectItem>
+                  <SelectItem value="valuation">Inventory Valuation</SelectItem>
+                  <SelectItem value="aging">Aging Report</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-[180px]">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="this-week">This Week</SelectItem>
+                  <SelectItem value="this-month">This Month</SelectItem>
+                  <SelectItem value="last-month">Last Month</SelectItem>
+                  <SelectItem value="this-quarter">This Quarter</SelectItem>
+                  <SelectItem value="this-year">This Year</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline">
+                <Filter className="h-4 w-4 mr-2" />
+                More Filters
+              </Button>
+            </div>
           </div>
-          <Select value={reportType} onValueChange={setReportType}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Report Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="stock-summary">Stock Summary</SelectItem>
-              <SelectItem value="movement">Stock Movement</SelectItem>
-              <SelectItem value="valuation">Inventory Valuation</SelectItem>
-              <SelectItem value="aging">Aging Report</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[180px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="this-week">This Week</SelectItem>
-              <SelectItem value="this-month">This Month</SelectItem>
-              <SelectItem value="last-month">Last Month</SelectItem>
-              <SelectItem value="this-quarter">This Quarter</SelectItem>
-              <SelectItem value="this-year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            More Filters
-          </Button>
         </div>
       </div>
 
-      {/* Report Table */}
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>SKU</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Opening</TableHead>
-              <TableHead>Stock In</TableHead>
-              <TableHead>Stock Out</TableHead>
-              <TableHead>Adjustments</TableHead>
-              <TableHead>Closing</TableHead>
-              <TableHead>Value</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.map((item) => (
-              <TableRow key={item.id} className="hover:bg-muted/30">
-                <TableCell className="font-mono font-medium">{item.sku}</TableCell>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-normal">{item.category}</Badge>
-                </TableCell>
-                <TableCell className="text-left">{item.openingStock.toLocaleString()}</TableCell>
-                <TableCell className="text-left text-success">+{item.stockIn.toLocaleString()}</TableCell>
-                <TableCell className="text-left text-destructive">-{item.stockOut.toLocaleString()}</TableCell>
-                <TableCell className="text-left">
-                  <span className={item.adjustments < 0 ? "text-destructive" : item.adjustments > 0 ? "text-success" : ""}>
-                    {item.adjustments !== 0 ? (item.adjustments > 0 ? `+${item.adjustments}` : item.adjustments) : "0"}
-                  </span>
-                </TableCell>
-                <TableCell className="text-left font-semibold">{item.closingStock.toLocaleString()}</TableCell>
-                <TableCell className="text-left font-semibold">${item.value.toLocaleString()}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredData.length} items
-        </p>
-      </div>
+      <DataTable
+        data={reportData}
+        columns={columns}
+        searchPlaceholder="Search by SKU, name, or category..."
+      />
     </div>
   );
 };

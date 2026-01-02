@@ -1,6 +1,7 @@
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -8,15 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Filter, Minus, Search } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, ArrowUp, Filter, Minus } from "lucide-react";
 import { useReducer } from "react";
 
 interface Movement {
@@ -32,6 +25,11 @@ interface Movement {
   unit: string;
   performedBy: string;
   notes: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
+  [key: string]: unknown;
 }
 
 type State = {
@@ -45,12 +43,12 @@ type Action =
   | { type: "SET_TYPE_FILTER"; payload: string };
 
 const initialMovements: Movement[] = [
-  { id: "1", timestamp: "2024-01-15 14:30:00", type: "in", referenceNo: "SI-2024-001", sku: "WGT-A123", productName: "Widget A-123", fromLocation: null, toLocation: "A-01-02-03", quantity: 100, unit: "pcs", performedBy: "John Smith", notes: "PO received" },
-  { id: "2", timestamp: "2024-01-15 14:15:00", type: "out", referenceNo: "SO-2024-002", sku: "CMP-B456", productName: "Component B-456", fromLocation: "B-02-01-01", toLocation: null, quantity: 50, unit: "pcs", performedBy: "Jane Doe", notes: "Order fulfillment" },
-  { id: "3", timestamp: "2024-01-15 13:45:00", type: "transfer", referenceNo: "TRF-2024-003", sku: "ELC-E345", productName: "Electronic E-345", fromLocation: "A-03-01-01", toLocation: "B-01-01-02", quantity: 25, unit: "pcs", performedBy: "Mike Johnson", notes: "Location optimization" },
-  { id: "4", timestamp: "2024-01-15 12:30:00", type: "adjustment", referenceNo: "ADJ-2024-001", sku: "RAW-C789", productName: "Raw Material C-789", fromLocation: "C-01-03-02", toLocation: null, quantity: -15, unit: "kg", performedBy: "Sarah Wilson", notes: "Damaged goods" },
-  { id: "5", timestamp: "2024-01-15 11:00:00", type: "in", referenceNo: "SI-2024-002", sku: "MCH-F678", productName: "Machine Part F-678", fromLocation: null, toLocation: "D-01-02-01", quantity: 50, unit: "pcs", performedBy: "John Smith", notes: "Supplier delivery" },
-  { id: "6", timestamp: "2024-01-15 10:30:00", type: "out", referenceNo: "SO-2024-003", sku: "PKG-H234", productName: "Packaging H-234", fromLocation: "E-02-01-03", toLocation: null, quantity: 200, unit: "pcs", performedBy: "Jane Doe", notes: "Bulk order" },
+  { id: "1", timestamp: "2024-01-15 14:30:00", type: "in", referenceNo: "SI-2024-001", sku: "WGT-A123", productName: "Widget A-123", fromLocation: null, toLocation: "A-01-02-03", quantity: 100, unit: "pcs", performedBy: "John Smith", notes: "PO received", created_at: "2024-01-15T14:30:00Z", created_by: "John Smith" },
+  { id: "2", timestamp: "2024-01-15 14:15:00", type: "out", referenceNo: "SO-2024-002", sku: "CMP-B456", productName: "Component B-456", fromLocation: "B-02-01-01", toLocation: null, quantity: 50, unit: "pcs", performedBy: "Jane Doe", notes: "Order fulfillment", created_at: "2024-01-15T14:15:00Z", created_by: "Jane Doe" },
+  { id: "3", timestamp: "2024-01-15 13:45:00", type: "transfer", referenceNo: "TRF-2024-003", sku: "ELC-E345", productName: "Electronic E-345", fromLocation: "A-03-01-01", toLocation: "B-01-01-02", quantity: 25, unit: "pcs", performedBy: "Mike Johnson", notes: "Location optimization", created_at: "2024-01-15T13:45:00Z", created_by: "Mike Johnson" },
+  { id: "4", timestamp: "2024-01-15 12:30:00", type: "adjustment", referenceNo: "ADJ-2024-001", sku: "RAW-C789", productName: "Raw Material C-789", fromLocation: "C-01-03-02", toLocation: null, quantity: -15, unit: "kg", performedBy: "Sarah Wilson", notes: "Damaged goods", created_at: "2024-01-15T12:30:00Z", created_by: "Sarah Wilson" },
+  { id: "5", timestamp: "2024-01-15 11:00:00", type: "in", referenceNo: "SI-2024-002", sku: "MCH-F678", productName: "Machine Part F-678", fromLocation: null, toLocation: "D-01-02-01", quantity: 50, unit: "pcs", performedBy: "John Smith", notes: "Supplier delivery", created_at: "2024-01-15T11:00:00Z", created_by: "John Smith" },
+  { id: "6", timestamp: "2024-01-15 10:30:00", type: "out", referenceNo: "SO-2024-003", sku: "PKG-H234", productName: "Packaging H-234", fromLocation: "E-02-01-03", toLocation: null, quantity: 200, unit: "pcs", performedBy: "Jane Doe", notes: "Bulk order", created_at: "2024-01-15T10:30:00Z", created_by: "Jane Doe" },
 ];
 
 const reducer = (state: State, action: Action): State => {
@@ -89,14 +87,74 @@ const StockMovements = () => {
     );
   };
 
-  const filteredMovements = state.movements.filter((m) => {
-    const matchesSearch =
-      m.sku.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      m.productName.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      m.referenceNo.toLowerCase().includes(state.searchQuery.toLowerCase());
-    const matchesType = state.typeFilter === "all" || m.type === state.typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const columns: ColumnDef<Movement>[] = [
+    {
+      key: "timestamp",
+      label: "Timestamp",
+      className: "text-muted-foreground text-sm",
+    },
+    {
+      key: "type",
+      label: "Type",
+      render: (row) => getTypeIcon(row.type),
+    },
+    {
+      key: "referenceNo",
+      label: "Reference",
+      className: "font-mono text-sm",
+    },
+    {
+      key: "sku",
+      label: "SKU / Product",
+      render: (row) => (
+        <div>
+          <span className="font-mono text-sm">{row.sku}</span>
+          <p className="text-sm text-muted-foreground">{row.productName}</p>
+        </div>
+      ),
+    },
+    {
+      key: "fromLocation",
+      label: "From",
+      render: (row) => (
+        row.fromLocation ? (
+          <span className="font-mono text-sm bg-muted px-2 py-1 rounded">{row.fromLocation}</span>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )
+      ),
+    },
+    {
+      key: "toLocation",
+      label: "To",
+      render: (row) => (
+        row.toLocation ? (
+          <span className="font-mono text-sm bg-muted px-2 py-1 rounded">{row.toLocation}</span>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )
+      ),
+    },
+    {
+      key: "quantity",
+      label: "Quantity",
+      className: "text-left",
+      render: (row) => (
+        <span className={`font-semibold ${row.quantity > 0 ? "text-success" : "text-destructive"}`}>
+          {row.quantity > 0 ? "+" : ""}{row.quantity} {row.unit}
+        </span>
+      ),
+    },
+    { key: "performedBy", label: "Performed By" },
+    {
+      key: "created_at",
+      label: "Time Recorded",
+      className: "hidden xl:table-cell text-sm text-muted-foreground",
+      render: (row) => row.created_at ? new Date(row.created_at).toLocaleTimeString() : "-",
+    },
+  ];
+
+  const filteredMovements = state.movements.filter(m => state.typeFilter === 'all' || m.type === state.typeFilter);
 
   return (
     <div className="space-y-6">
@@ -106,140 +164,65 @@ const StockMovements = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <ArrowDown className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="stat-label">Stock In Today</p>
-              <p className="stat-value">150</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <ArrowUp className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="stat-label">Stock Out Today</p>
-              <p className="stat-value">250</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <ArrowRightLeft className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="stat-label">Transfers Today</p>
-              <p className="stat-value">12</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Minus className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="stat-label">Adjustments</p>
-              <p className="stat-value">3</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Stock In Today"
+          value="150"
+          icon={ArrowDown}
+          variant="success"
+        />
+        <StatCard
+          label="Stock Out Today"
+          value="250"
+          icon={ArrowUp}
+          variant="destructive"
+        />
+        <StatCard
+          label="Transfers Today"
+          value="12"
+          icon={ArrowRightLeft}
+          variant="primary"
+        />
+        <StatCard
+          label="Adjustments"
+          value="3"
+          icon={Minus}
+          variant="warning"
+        />
       </div>
 
       <div className="content-section">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="relative flex-1 min-w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by SKU, product, or reference..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
+            {/* Search and Filter */}
+             <div className="flex items-center gap-2">
+               <Select
+                value={state.typeFilter}
+                onValueChange={(v) => dispatch({ type: "SET_TYPE_FILTER", payload: v })}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="in">Stock In</SelectItem>
+                  <SelectItem value="out">Stock Out</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
+                  <SelectItem value="adjustment">Adjustment</SelectItem>
+                </SelectContent>
+              </Select>
+               <Button variant="outline" size="icon">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <Select
-            value={state.typeFilter}
-            onValueChange={(v) => dispatch({ type: "SET_TYPE_FILTER", payload: v })}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="in">Stock In</SelectItem>
-              <SelectItem value="out">Stock Out</SelectItem>
-              <SelectItem value="transfer">Transfer</SelectItem>
-              <SelectItem value="adjustment">Adjustment</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>
-                <Button variant="ghost" size="sm" className="-ml-3 h-8">
-                  Timestamp
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>SKU / Product</TableHead>
-              <TableHead>From</TableHead>
-              <TableHead>To</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Performed By</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMovements.map((movement) => (
-              <TableRow key={movement.id} className="hover:bg-muted/30">
-                <TableCell className="text-muted-foreground text-sm">{movement.timestamp}</TableCell>
-                <TableCell>{getTypeIcon(movement.type)}</TableCell>
-                <TableCell className="font-mono text-sm">{movement.referenceNo}</TableCell>
-                <TableCell>
-                  <div>
-                    <span className="font-mono text-sm">{movement.sku}</span>
-                    <p className="text-sm text-muted-foreground">{movement.productName}</p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {movement.fromLocation ? (
-                    <span className="font-mono text-sm bg-muted px-2 py-1 rounded">{movement.fromLocation}</span>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {movement.toLocation ? (
-                    <span className="font-mono text-sm bg-muted px-2 py-1 rounded">{movement.toLocation}</span>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-left">
-                  <span className={`font-semibold ${movement.quantity > 0 ? "text-success" : "text-destructive"}`}>
-                    {movement.quantity > 0 ? "+" : ""}{movement.quantity} {movement.unit}
-                  </span>
-                </TableCell>
-                <TableCell>{movement.performedBy}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={filteredMovements}
+        columns={columns}
+        searchPlaceholder="Search by SKU, product, or reference..."
+      />
     </div>
   );
 };

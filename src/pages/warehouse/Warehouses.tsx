@@ -1,237 +1,342 @@
-import { useReducer } from "react";
-import { Warehouse, Plus, Search, Edit, MapPin, Boxes, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import AddModal, { AddField } from "@/components/modals/AddModal";
-import EditModal, { EditField } from "@/components/modals/EditModal";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+/**
+ * Warehouses Page - Refactored
+ * 
+ * Features:
+ * ✅ Standardized StatCards
+ * ✅ DataTable with fixed pagination
+ * ✅ Complete Warehouse schema with audit columns
+ * ✅ ActionMenu for operations
+ */
 
-interface WarehouseData {
+import { StatCard } from "@/components/dashboard/StatCard";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { Warehouse } from "@/types/database";
+import { useState } from "react";
+
+/**
+ * Extended Warehouse interface for UI display
+ */
+interface WarehouseDisplay extends Warehouse {
+  created_by_name?: string;
+  updated_by_name?: string;
+  used_capacity?: number; // Calculated field
+  utilization_percentage?: number; // Calculated field
+  location_count?: number; // Count of locations
   [key: string]: unknown;
-  id: string;
-  name: string;
-  code: string;
-  address: string;
-  manager: string;
-  zones: number;
-  totalLocations: number;
-  capacity: number;
-  usedCapacity: number;
-  status: "active" | "inactive";
 }
 
-type State = {
-  warehouses: WarehouseData[];
-  searchQuery: string;
-};
-
-type Action = 
-  | { type: "SET_SEARCH"; payload: string }
-  | { type: "ADD_WAREHOUSE"; payload: WarehouseData }
-  | { type: "UPDATE_WAREHOUSE"; payload: WarehouseData };
-
-const initialWarehouses: WarehouseData[] = [
-  { id: "1", name: "Main Warehouse", code: "WH-001", address: "123 Industrial Park, City A", manager: "John Smith", zones: 5, totalLocations: 250, capacity: 50000, usedCapacity: 32500, status: "active" },
-  { id: "2", name: "Secondary Warehouse", code: "WH-002", address: "456 Logistics Ave, City B", manager: "Jane Doe", zones: 3, totalLocations: 150, capacity: 30000, usedCapacity: 21000, status: "active" },
-  { id: "3", name: "Cold Storage", code: "WH-003", address: "789 Refrigeration Blvd, City A", manager: "Mike Johnson", zones: 2, totalLocations: 80, capacity: 10000, usedCapacity: 8500, status: "active" },
-  { id: "4", name: "Overflow Facility", code: "WH-004", address: "321 Expansion Rd, City C", manager: "Sarah Wilson", zones: 2, totalLocations: 100, capacity: 20000, usedCapacity: 4000, status: "inactive" },
-];
-
-const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "SET_SEARCH":
-      return { ...state, searchQuery: action.payload };
-    case "ADD_WAREHOUSE":
-      return {
-        ...state,
-        warehouses: [
-          { ...action.payload, status: "active", zones: 0, totalLocations: 0, usedCapacity: 0 },
-          ...state.warehouses,
-        ],
-      };
-    case "UPDATE_WAREHOUSE":
-      return {
-        ...state,
-        warehouses: state.warehouses.map((w) => w.id === action.payload.id ? action.payload : w),
-      };
-    default:
-      return state;
-  }
-};
-
-const Warehouses = () => {
-  const [state, dispatch] = useReducer(reducer, {
-    warehouses: initialWarehouses,
-    searchQuery: "",
-  });
-
-  // Generate next warehouse code
-  const nextWarehouseNumber = state.warehouses.length > 0
-    ? Math.max(...state.warehouses.map(w => parseInt(w.code.split('-')[1] || "0"))) + 1
-    : 1;
-  const generatedWarehouseCode = `WH-${nextWarehouseNumber.toString().padStart(3, "0")}`;
-
-  // Form fields configuration
-  const warehouseFields: AddField<WarehouseData>[] = [
-    { label: "Code (Auto)", name: "code", type: "text", disabled: true },
-    { label: "Warehouse Name", name: "name", type: "text", placeholder: "Enter warehouse name", required: true },
-    { label: "Address", name: "address", type: "textarea", placeholder: "Enter full address", required: true },
-    { label: "Manager", name: "manager", type: "text", placeholder: "Enter manager name", required: true },
-    { label: "Total Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
-  ];
-
-  const editWarehouseFields: EditField<WarehouseData>[] = [
-    { label: "Code", name: "code", type: "text", disabled: true },
-    { label: "Warehouse Name", name: "name", type: "text", placeholder: "Enter warehouse name", required: true },
-    { label: "Address", name: "address", type: "textarea", placeholder: "Enter full address", required: true },
-    { label: "Manager", name: "manager", type: "text", placeholder: "Enter manager name", required: true },
-    { label: "Total Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
-    { 
-      label: "Status", 
-      name: "status", 
-      type: "select",
-      options: [
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" }
-      ]
+export default function Warehouses() {
+  const [warehouses, setWarehouses] = useState<WarehouseDisplay[]>([
+    {
+      id: 1,
+      name: "Main Warehouse",
+      code: "WH-001",
+      type: "main",
+      address: "123 Industrial Park, City A",
+      contact_person: "John Smith",
+      phone: "+1 (555) 123-4567",
+      email: "jsmith@warehouse.com",
+      capacity: 50000,
+      used_capacity: 32500,
+      utilization_percentage: 65,
+      location_count: 250,
+      status: "active",
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-01-01T08:00:00Z",
+      updated_at: "2024-01-01T08:00:00Z",
     },
-  ];
+    {
+      id: 2,
+      name: "Secondary Warehouse",
+      code: "WH-002",
+      type: "regional",
+      address: "456 Logistics Ave, City B",
+      contact_person: "Jane Doe",
+      phone: "+1 (555) 987-6543",
+      email: "jdoe@warehouse.com",
+      capacity: 30000,
+      used_capacity: 21000,
+      utilization_percentage: 70,
+      location_count: 150,
+      status: "active",
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-01-05T09:00:00Z",
+      updated_at: "2024-01-05T09:00:00Z",
+    },
+    {
+      id: 3,
+      name: "Cold Storage",
+      code: "WH-003",
+      type: "regional",
+      address: "789 Refrigeration Blvd, City A",
+      contact_person: "Mike Johnson",
+      phone: "+1 (555) 456-7890",
+      email: "mjohnson@warehouse.com",
+      capacity: 10000,
+      used_capacity: 8500,
+      utilization_percentage: 85,
+      location_count: 80,
+      status: "active",
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-02-01T10:00:00Z",
+      updated_at: "2024-02-01T10:00:00Z",
+    },
+    {
+      id: 4,
+      name: "Overflow Facility",
+      code: "WH-004",
+      type: "outlet",
+      address: "321 Expansion Rd, City C",
+      contact_person: "Sarah Wilson",
+      phone: "+1 (555) 789-0123",
+      email: "swilson@warehouse.com",
+      capacity: 20000,
+      used_capacity: 4000,
+      utilization_percentage: 20,
+      location_count: 100,
+      status: "inactive",
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+      created_at: "2024-03-01T11:00:00Z",
+      updated_at: "2024-03-15T14:00:00Z",
+    },
+  ]);
 
+  // Helper for capacity color
   const getCapacityColor = (percentage: number) => {
     if (percentage >= 90) return "bg-destructive";
     if (percentage >= 70) return "bg-warning";
     return "bg-success";
   };
 
-  const filteredWarehouses = state.warehouses.filter(
-    (w) =>
-      w.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-      w.code.toLowerCase().includes(state.searchQuery.toLowerCase())
-  );
+  const columns: ColumnDef<WarehouseDisplay>[] = [
+    { 
+      key: "code", 
+      label: "Code", 
+      className: "font-mono font-medium" 
+    },
+    { 
+      key: "name", 
+      label: "Warehouse Name", 
+      className: "font-medium" 
+    },
+    {
+      key: "type",
+      label: "Type",
+      render: (row) => (
+        <Badge variant="outline" className="capitalize">{row.type}</Badge>
+      )
+    },
+    { 
+      key: "address", 
+      label: "Address", 
+      className: "hidden md:table-cell text-sm text-muted-foreground truncate max-w-[200px]" 
+    },
+    { 
+      key: "contact_person", 
+      label: "Manager",
+      className: "hidden lg:table-cell" 
+    },
+    {
+      key: "utilization_percentage",
+      label: "Capacity",
+      className: "min-w-[150px]",
+      render: (row) => {
+        const percent = row.utilization_percentage || 0;
+        return (
+          <div className="flex flex-col gap-1 w-full">
+            <div className="flex justify-between text-xs">
+              <span>{percent}%</span>
+              <span className="text-muted-foreground">
+                {((row.used_capacity || 0) / 1000).toFixed(1)}k / {((row.capacity || 0) / 1000).toFixed(1)}k
+              </span>
+            </div>
+            <Progress value={percent} className={cn("h-1.5", getCapacityColor(percent))} />
+          </div>
+        );
+      }
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => {
+        const variants: Record<string, string> = {
+          active: "default",
+          inactive: "secondary",
+        };
+        return <Badge variant={variants[row.status] as any}>{row.status}</Badge>;
+      },
+    },
+    {
+      key: "created_by_name",
+      label: "Created By",
+      className: "text-sm text-muted-foreground hidden 2xl:table-cell",
+    },
+    {
+      key: "created_at",
+      label: "Created At",
+      className: "text-sm text-muted-foreground hidden 2xl:table-cell",
+      render: (row) => new Date(row.created_at).toLocaleDateString(),
+    },
+    {
+      key: "updated_by_name",
+      label: "Updated By",
+      className: "text-sm text-muted-foreground hidden xl:table-cell",
+    },
+    {
+      key: "updated_at",
+      label: "Last Updated",
+      className: "text-sm text-muted-foreground hidden xl:table-cell",
+      render: (row) => new Date(row.updated_at).toLocaleDateString(),
+    },
+  ];
+
+  const addFields: AddField<WarehouseDisplay>[] = [
+    { label: "Warehouse Name", name: "name", type: "text", required: true },
+    { label: "Type", name: "type", type: "select", required: true, options: [
+      { value: "main", label: "Main Warehouse" },
+      { value: "regional", label: "Regional Hub" },
+      { value: "outlet", label: "Outlet" },
+      { value: "transit", label: "Transit Hub" },
+    ]},
+    { label: "Address", name: "address", type: "textarea", required: true },
+    { label: "Contact Person", name: "contact_person", type: "text", required: true },
+    { label: "Phone", name: "phone", type: "text", required: true },
+    { label: "Email", name: "email", type: "text", required: true },
+    { label: "Capacity (Units)", name: "capacity", type: "number", required: true },
+    { label: "Status", name: "status", type: "select", options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+    ]},
+  ];
+
+  const editFields: EditField<WarehouseDisplay>[] = [...addFields];
+
+  const handleAdd = (data: Partial<WarehouseDisplay>) => {
+    const newWarehouse: WarehouseDisplay = {
+      ...data as WarehouseDisplay,
+      id: Date.now(),
+      code: `WH-${String(warehouses.length + 1).padStart(3, "0")}`,
+      used_capacity: 0,
+      utilization_percentage: 0,
+      location_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: 1,
+      created_by_name: "Admin User",
+      updated_by: 1,
+      updated_by_name: "Admin User",
+    };
+    setWarehouses([newWarehouse, ...warehouses]);
+  };
+
+  const handleUpdate = (id: number, data: Partial<WarehouseDisplay>) => {
+    setWarehouses(warehouses.map(w => w.id === id ? { ...w, ...data, updated_at: new Date().toISOString() } : w));
+  };
+
+  const handleDelete = (id: number) => {
+    setWarehouses(warehouses.filter(w => w.id !== id));
+  };
+
+  // Stats
+  const stats = {
+    total: warehouses.length,
+    active: warehouses.filter(w => w.status === "active").length,
+    totalCapacity: warehouses.reduce((sum, w) => sum + (w.capacity || 0), 0),
+    avgUtilization: Math.round(warehouses.reduce((sum, w) => sum + (w.utilization_percentage || 0), 0) / warehouses.length),
+  };
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Warehouses</h1>
-            <p className="page-description">Manage warehouse facilities and capacity</p>
-          </div>
-          <AddModal<WarehouseData>
-            title="Add New Warehouse"
-            description="Create a new warehouse facility"
-            fields={warehouseFields}
-            initialData={{
-              id: String(Date.now()),
-              code: generatedWarehouseCode,
-              name: "",
-              address: "",
-              manager: "",
-              capacity: 0,
-              zones: 0,
-              totalLocations: 0,
-              usedCapacity: 0,
-              status: "active",
-            }}
-            onSubmit={(data) => dispatch({ type: "ADD_WAREHOUSE", payload: data as WarehouseData })}
-            triggerLabel="Add Warehouse"
-            submitLabel="Create Warehouse"
-            size="lg"
-          />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Warehouses</h1>
+          <p className="page-description">Manage warehouse facilities and capacity</p>
         </div>
+        <AddModal<WarehouseDisplay>
+          title="Add New Warehouse"
+          description="Create a new warehouse facility"
+          fields={addFields}
+          initialData={{} as WarehouseDisplay}
+          onSubmit={handleAdd}
+          triggerLabel="Add Warehouse"
+          submitLabel="Create Warehouse"
+          size="lg"
+        />
       </div>
 
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search warehouses..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Warehouses"
+          value={stats.total}
+          contentType="warehouses"
+          variant="primary"
+        />
+        <StatCard
+          label="Active Facilities"
+          value={stats.active}
+          contentType="active"
+          variant="success"
+        />
+        <StatCard
+          label="Total Capacity"
+          value={stats.totalCapacity.toLocaleString()}
+          contentType="capacity"
+          variant="default"
+        />
+        <StatCard
+          label="Avg Utilization"
+          value={`${stats.avgUtilization}%`}
+          contentType="percentage"
+          variant={stats.avgUtilization > 80 ? "warning" : "default"}
+          change={{ value: 2, type: "increase" }}
+        />
+      </div>
+
+      <DataTable
+        data={warehouses}
+        columns={columns}
+        searchPlaceholder="Search warehouses..."
+        defaultPageSize={10}
+        actions={(row) => (
+          <ActionMenu>
+            <EditModal<WarehouseDisplay>
+              title="Edit Warehouse"
+              description={`Update ${row.name}`}
+              fields={editFields}
+              data={row}
+              onSubmit={(data) => handleUpdate(row.id, data)}
+              triggerLabel="Edit"
+              submitLabel="Save Changes"
             />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredWarehouses.map((warehouse) => {
-          const utilizationPercent = Math.round((warehouse.usedCapacity / warehouse.capacity) * 100);
-          return (
-            <div
-              key={warehouse.id}
-              className="content-section hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                    <Warehouse className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{warehouse.name}</h3>
-                      <Badge variant={warehouse.status === "active" ? "default" : "secondary"}>
-                        {warehouse.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground font-mono">{warehouse.code}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <EditModal<WarehouseData>
-                    title="Edit Warehouse"
-                    description="Update warehouse details"
-                    fields={editWarehouseFields}
-                    data={warehouse}
-                    onSubmit={(data) => dispatch({ type: "UPDATE_WAREHOUSE", payload: data as WarehouseData })}
-                    triggerLabel=""
-                    triggerSize="icon"
-                    submitLabel="Update Warehouse"
-                    size="lg"
-                  />
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  {warehouse.address}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Manager:</span>
-                  <span className="font-medium">{warehouse.manager}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Zones / Locations:</span>
-                  <span className="font-medium">{warehouse.zones} / {warehouse.totalLocations}</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-border">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Boxes className="h-4 w-4" />
-                    Capacity Utilization
-                  </span>
-                  <span className="font-medium">
-                    {warehouse.usedCapacity.toLocaleString()} / {warehouse.capacity.toLocaleString()} ({utilizationPercent}%)
-                  </span>
-                </div>
-                <Progress
-                  value={utilizationPercent}
-                  className={cn("h-2", getCapacityColor(utilizationPercent))}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            <DeleteModal
+              title="Delete Warehouse"
+              description={`Are you sure you want to delete ${row.name}?`}
+              onSubmit={() => handleDelete(row.id)}
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
+      />
     </div>
   );
-};
-
-export default Warehouses;
+}
