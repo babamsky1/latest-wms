@@ -1,8 +1,14 @@
-import { useReducer } from "react";
-import { Users, Plus, Search, Edit, Trash2, MoreHorizontal, Shield, Mail } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -12,14 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Mail, MoreHorizontal, Search, Shield, Users } from "lucide-react";
+import { useReducer } from "react";
 
 interface User {
   [key: string]: unknown;
@@ -296,7 +296,7 @@ const UserManagement = () => {
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -321,34 +321,49 @@ const UserManagement = () => {
                 <TableCell className="text-muted-foreground text-sm">{user.lastLogin}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{user.createdAt}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <EditModal<User>
-                      title="Edit User"
-                      description="Update user information"
-                      fields={editUserFields}
-                      data={user}
-                      onSubmit={(data) => dispatch({ type: "UPDATE_USER", payload: data as User })}
-                      triggerLabel="Edit"
-                      triggerSize="sm"
-                      submitLabel="Update User"
-                      size="lg"
-                    />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => dispatch({ type: "DELETE_USER", payload: user.id })}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end" className="p-2">
+                      <div className="flex flex-col gap-2 w-full">
+                        {/* Edit Button */}
+                        <EditModal<User>
+                          title="Edit User"
+                          description="Update user information"
+                          fields={editUserFields}
+                          data={user}
+                          onSubmit={(data) =>
+                            dispatch({
+                              type: "UPDATE_USER",
+                              payload: data as User,
+                            })
+                          }
+                          triggerLabel="Edit"
+                          triggerSize="default"
+                          submitLabel="Update User"
+                          size="lg"
+                        />
+
+                        {/* Delete Button */}
+                        <DeleteModal
+                          title="Delete User"
+                          description={`Are you sure you want to delete the user "${user.name}"? This action cannot be undone.`}
+                          onSubmit={() =>
+                            dispatch({
+                              type: "DELETE_USER",
+                              payload: user.id,
+                            })
+                          }
+                          triggerLabel="Delete"
+                          triggerSize="default"
+                        />
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

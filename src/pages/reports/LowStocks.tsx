@@ -204,7 +204,7 @@ const LowStocks = () => {
               <TableHead>Status</TableHead>
               <TableHead>Reorder Qty</TableHead>
               <TableHead>Supplier</TableHead>
-              <TableHead className="w-[120px]">Actions</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -1,12 +1,12 @@
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import AddModal, { AddField } from "@/components/modals/AddModal";
-import EditModal, { EditField } from "@/components/modals/EditModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, Clock, Edit, Eye, MoreHorizontal, Package, Plus, Search, Trash2, Truck } from "lucide-react";
+import { CheckCircle, Clock, MoreHorizontal, Package, Search, Truck } from "lucide-react";
 import { useReducer } from "react";
 
 interface ReceivingRecord {
@@ -264,8 +264,10 @@ const Receiving = () => {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
+
+                    <DropdownMenuContent align="end" className="p-2">
+                      <div className="flex flex-col gap-2 w-full">
+                        {/* Edit Button */}
                         <EditModal<ReceivingRecord>
                           title="Edit Receiving"
                           description="Update receiving record"
@@ -273,20 +275,20 @@ const Receiving = () => {
                           data={record}
                           onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as ReceivingRecord })}
                           triggerLabel="Edit"
-                          triggerSize="sm"
+                          triggerSize="default"
                           submitLabel="Update Receiving"
                           size="lg"
                         />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
+
+                        {/* Delete Button */}
+                        <DeleteModal
+                          title="Delete Receiving Record"
+                          description={`Are you sure you want to delete the receiving record "${record.poNumber}"? This action cannot be undone.`}
+                          onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+                          triggerLabel="Delete"
+                          triggerSize="default"
+                        />
+                      </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

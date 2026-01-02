@@ -1,17 +1,17 @@
-import { useReducer } from "react";
-import { Button } from "@/components/ui/button";
+import AddModal from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { DataTable, ColumnDef } from "@/components/table/DataTable";
-import { ArrowRight, ArrowRightLeft, CheckCircle, Clock, Eye, MoreHorizontal, Trash2 } from "lucide-react";
-import AddModal from "@/components/modals/AddModal";
-import EditModal, { EditField } from "@/components/modals/EditModal";
 import { format } from "date-fns";
+import { ArrowRight, ArrowRightLeft, CheckCircle, Clock, MoreHorizontal } from "lucide-react";
+import { useReducer } from "react";
 
 interface Transfer {
   id: string;
@@ -143,37 +143,39 @@ export default function Transfers() {
   ];
 
   const renderActions = (record: Transfer) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-popover">
-        <DropdownMenuItem asChild>
-          <EditModal<Transfer>
-            title="Edit Transfer"
-            description="Update transfer details"
-            fields={editFields}
-            data={record}
-            onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: { ...data, updatedAt: format(new Date(), "yyyy-MM-dd HH:mm"), updatedBy: "admin" } as Transfer })}
-            triggerLabel="Edit"
-            triggerSize="sm"
-            submitLabel="Update Transfer"
-            size="lg"
-          />
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Eye className="h-4 w-4 mr-2" /> View
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-destructive"
-          onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-        >
-          <Trash2 className="h-4 w-4 mr-2" /> Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end" className="p-2">
+                      <div className="flex flex-col gap-2 w-full">
+                        {/* Edit Button */}
+                        <EditModal<Transfer>
+                          title="Edit Transfer"
+                          description="Update transfer details"
+                          fields={editFields}
+                          data={record}
+                          onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: { ...data, updatedAt: format(new Date(), "yyyy-MM-dd HH:mm"), updatedBy: "admin" } as Transfer })}
+                          triggerLabel="Edit"
+                          triggerSize="default"
+                          submitLabel="Update Transfer"
+                          size="lg"
+                        />
+
+                        {/* Delete Button */}
+                        <DeleteModal
+                          title="Delete Transfer"
+                          description={`Are you sure you want to delete the transfer "${record.referenceNo}"? This action cannot be undone.`}
+                          onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+                          triggerLabel="Delete"
+                          triggerSize="default"
+                        />
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
   );
 
   return (

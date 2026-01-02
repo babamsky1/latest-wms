@@ -1,20 +1,17 @@
+import DeleteModal from "@/components/modals/DeleteModal";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   CheckCircle,
   Clock,
-  Edit,
-  Eye,
   MoreHorizontal,
   Package,
-  Plus,
-  Search,
-  Trash2
+  Search
 } from "lucide-react";
 import { useReducer, useState } from "react";
-import AddModal, { AddField } from "../../components/modals/AddModal";
+import AddModal from "../../components/modals/AddModal";
 import EditModal, { EditField } from "../../components/modals/EditModal";
 
 interface StockInRecord {
@@ -215,8 +212,10 @@ const StockIn = () => {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
+
+                    <DropdownMenuContent align="end" className="p-2">
+                      <div className="flex flex-col gap-2 w-full">
+                        {/* Edit Button */}
                         <EditModal<StockInRecord>
                           title="Edit Stock In"
                           description="Update stock in record"
@@ -224,20 +223,20 @@ const StockIn = () => {
                           data={record}
                           onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as StockInRecord })}
                           triggerLabel="Edit"
-                          triggerSize="sm"
+                          triggerSize="default"
                           submitLabel="Update Stock In"
                           size="lg"
                         />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" /> View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                      </DropdownMenuItem>
+
+                        {/* Delete Button */}
+                        <DeleteModal
+                          title="Delete Stock In"
+                          description={`Are you sure you want to delete the stock in record "${record.referenceNo}"? This action cannot be undone.`}
+                          onSubmit={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
+                          triggerLabel="Delete"
+                          triggerSize="default"
+                        />
+                      </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

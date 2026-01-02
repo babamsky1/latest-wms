@@ -1,32 +1,19 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { FolderTree, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { ColumnDef, DataTable } from "@/components/table/DataTable"; // your DataTable
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
+import { FolderTree, MoreHorizontal, Settings } from "lucide-react";
 import { useReducer } from "react";
 
 interface Category {
   id: string;
   name: string;
-  parentCategory: string | null;
   productCount: number;
   status: "active" | "inactive";
   createdAt: string;
+  [key: string]: string | number | null;
 }
 
 type State = {
@@ -41,13 +28,13 @@ type Action =
   | { type: "UPDATE_CATEGORY"; payload: Category };
 
 const initialCategories: Category[] = [
-  { id: "1", name: "Electronics", parentCategory: null, productCount: 245, status: "active", createdAt: "2024-01-10" },
-  { id: "2", name: "Smartphones", parentCategory: "Electronics", productCount: 89, status: "active", createdAt: "2024-01-10" },
-  { id: "3", name: "Laptops", parentCategory: "Electronics", productCount: 56, status: "active", createdAt: "2024-01-11" },
-  { id: "4", name: "Raw Materials", parentCategory: null, productCount: 312, status: "active", createdAt: "2024-01-08" },
-  { id: "5", name: "Packaging", parentCategory: null, productCount: 78, status: "active", createdAt: "2024-01-09" },
-  { id: "6", name: "Machinery Parts", parentCategory: null, productCount: 156, status: "active", createdAt: "2024-01-12" },
-  { id: "7", name: "Obsolete Items", parentCategory: null, productCount: 23, status: "inactive", createdAt: "2024-01-05" },
+  { id: "1", name: "Electronics", productCount: 245, status: "active", createdAt: "2024-01-10" },
+  { id: "2", name: "Smartphones", productCount: 89, status: "active", createdAt: "2024-01-10" },
+  { id: "3", name: "Laptops", productCount: 56, status: "active", createdAt: "2024-01-11" },
+  { id: "4", name: "Raw Materials", productCount: 312, status: "active", createdAt: "2024-01-08" },
+  { id: "5", name: "Packaging", productCount: 78, status: "active", createdAt: "2024-01-09" },
+  { id: "6", name: "Machinery Parts", productCount: 156, status: "active", createdAt: "2024-01-12" },
+  { id: "7", name: "Obsolete Items", productCount: 23, status: "inactive", createdAt: "2024-01-05" },
 ];
 
 const reducer = (state: State, action: Action): State => {
@@ -60,14 +47,14 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         categories: [
-          { ...action.payload, status: "active", productCount: 0, createdAt: new Date().toISOString().split('T')[0] },
+          { ...action.payload, status: "active", productCount: 0, createdAt: new Date().toISOString().split("T")[0] },
           ...state.categories,
         ],
       };
     case "UPDATE_CATEGORY":
       return {
         ...state,
-        categories: state.categories.map((c) => c.id === action.payload.id ? action.payload : c),
+        categories: state.categories.map((c) => (c.id === action.payload.id ? action.payload : c)),
       };
     default:
       return state;
@@ -75,171 +62,149 @@ const reducer = (state: State, action: Action): State => {
 };
 
 const Categories = () => {
-  const [state, dispatch] = useReducer(reducer, {
-    categories: initialCategories,
-    searchQuery: "",
-  });
+  const [state, dispatch] = useReducer(reducer, { categories: initialCategories, searchQuery: "" });
 
-  // Form fields configuration
+  // Form fields for Add/Edit
   const categoryFields: AddField<Category>[] = [
     { label: "Category Name", name: "name", type: "text", placeholder: "Enter category name", required: true },
-    { 
-      label: "Parent Category", 
-      name: "parentCategory", 
-      type: "select",
-      options: [
-        { value: "", label: "None (Root)" },
-        { value: "Electronics", label: "Electronics" },
-        { value: "Raw Materials", label: "Raw Materials" },
-        { value: "Packaging", label: "Packaging" },
-        { value: "Machinery Parts", label: "Machinery Parts" }
-      ]
-    },
   ];
 
   const editCategoryFields: EditField<Category>[] = [
-    { label: "Category Name", name: "name", type: "text", placeholder: "Enter category name", required: true },
-    { 
-      label: "Parent Category", 
-      name: "parentCategory", 
-      type: "select",
-      options: [
-        { value: "", label: "None (Root)" },
-        { value: "Electronics", label: "Electronics" },
-        { value: "Raw Materials", label: "Raw Materials" },
-        { value: "Packaging", label: "Packaging" },
-        { value: "Machinery Parts", label: "Machinery Parts" }
-      ]
-    },
-    { 
-      label: "Status", 
-      name: "status", 
+    ...categoryFields,
+    {
+      label: "Status",
+      name: "status",
       type: "select",
       options: [
         { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" }
-      ]
+        { value: "inactive", label: "Inactive" },
+      ],
     },
   ];
 
-  const filteredCategories = state.categories.filter((cat) =>
-    cat.name.toLowerCase().includes(state.searchQuery.toLowerCase())
+  // Define columns for DataTable
+  const columns: ColumnDef<Category>[] = [
+    {
+      key: "name",
+      label: "Category Name",
+      sortable: true,
+      filterable: true,
+      filterType: "text",
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <FolderTree className="h-4 w-4 text-primary" />
+          <span className="font-medium">{row.name}</span>
+        </div>
+      ),
+    },
+    { key: "productCount", label: "Products", sortable: true },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: [
+        { value: "", label: "All" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      render: (row) => (
+        <span className={`status-badge ${row.status === "active" ? "status-active" : "status-inactive"}`}>
+          {row.status}
+        </span>
+      ),
+    },
+    {
+      key: "createdAt",
+      label: "Created",
+      sortable: true,
+      filterable: true,
+      filterType: "date", // will show date picker
+    },
+  ];
+
+  // Actions column
+  const actions = (category: Category) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="p-2 w-auto min-w-[120px]">
+        <div className="flex flex-col gap-2 w-full">
+          <EditModal<Category>
+            title="Edit Category"
+            description="Update category details"
+            fields={editCategoryFields}
+            data={category}
+            onSubmit={(data) => dispatch({ type: "UPDATE_CATEGORY", payload: data })}
+            triggerLabel="Edit"
+            triggerSize="default"
+            submitLabel="Update Category"
+            size="lg"
+          />
+          <DeleteModal
+            title="Delete Category"
+            description={`Are you sure you want to delete "${category.name}"? This action cannot be undone.`}
+            onSubmit={() => dispatch({ type: "DELETE_CATEGORY", payload: category.id })}
+            triggerLabel="Delete"
+            triggerSize="default"
+          />
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Categories</h1>
-            <p className="page-description">Organize products into categories and subcategories</p>
-          </div>
-          <AddModal<Category>
-            title="Add New Category"
-            description="Create a new product category"
-            fields={categoryFields}
-            initialData={{
-              id: String(Date.now()),
-              name: "",
-              parentCategory: null,
-              productCount: 0,
-              status: "active",
-              createdAt: new Date().toISOString().split('T')[0],
-            }}
-            onSubmit={(data) => dispatch({ type: "ADD_CATEGORY", payload: { ...data, parentCategory: data.parentCategory || null } as Category })}
-            triggerLabel="Add Category"
-            submitLabel="Create Category"
-            size="lg"
-          />
+      {/* Header + Add Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Categories</h1>
+          <p className="page-description">Organize products into categories</p>
         </div>
+
+        <AddModal<Category>
+          title="Add New Category"
+          description="Create a new product category"
+          fields={categoryFields}
+          initialData={{
+            id: String(Date.now()),
+            name: "",
+            productCount: 0,
+            status: "active",
+            createdAt: new Date().toISOString().split("T")[0],
+          }}
+          onSubmit={(data) => dispatch({ type: "ADD_CATEGORY", payload: data })}
+          triggerLabel="Add Category"
+          submitLabel="Create Category"
+          size="lg"
+        />
       </div>
 
-      <div className="content-section">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search categories..."
-              value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
-              className="pl-10"
-            />
+      {/* Stat card */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <Settings className="h-5 w-5 text-primary" />
+            <div>
+              <p className="stat-label">Total Categories</p>
+              <p className="stat-value">{state.categories.length}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="table-container">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Category Name</TableHead>
-              <TableHead>Parent Category</TableHead>
-              <TableHead>Products</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCategories.map((category) => (
-              <TableRow key={category.id} className="hover:bg-muted/30">
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <FolderTree className="h-4 w-4 text-primary" />
-                    <span className="font-medium">{category.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-left gap-2">
-                  {category.parentCategory ? (
-                    <Badge variant="default">{category.parentCategory}</Badge>
-                  ) : (
-                    <span className="text-muted-foreground">Root</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="font-semibold">{category.productCount}</TableCell>
-                <TableCell>
-                  <span className={`status-badge ${category.status === "active" ? "status-active" : "status-inactive"}`}>
-                    {category.status}
-                  </span>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{category.createdAt}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <EditModal<Category>
-                          title="Edit Category"
-                          description="Update category details"
-                          fields={editCategoryFields}
-                          data={category}
-                          onSubmit={(data) => dispatch({ type: "UPDATE_CATEGORY", payload: data as Category })}
-                          triggerLabel="Edit"
-                          triggerSize="sm"
-                          submitLabel="Update Category"
-                          size="lg"
-                        />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => dispatch({ type: "DELETE_CATEGORY", payload: category.id })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {/* DataTable with search, filters, and actions */}
+      <DataTable<Category>
+        data={state.categories}
+        columns={columns}
+        searchPlaceholder="Search categories..."
+        actions={actions}
+        pageSize={10}
+      />
     </div>
   );
 };

@@ -1,18 +1,15 @@
-import { useReducer } from "react";
-import { MapPin, Plus, Search, Filter, Edit, Trash2, MoreHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import EditModal, { EditField } from "@/components/modals/EditModal";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -21,13 +18,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { Filter, MapPin, MoreHorizontal, Search } from "lucide-react";
+import { useReducer } from "react";
 
 interface Location {
   [key: string]: unknown;
@@ -58,13 +58,97 @@ type Action =
   | { type: "UPDATE_LOCATION"; payload: Location };
 
 const initialLocations: Location[] = [
-  { id: "1", code: "A-01-02-03", warehouse: "Main Warehouse", zone: "A", rack: "01", shelf: "02", bin: "03", type: "picking", capacity: 500, usedCapacity: 250, status: "available" },
-  { id: "2", code: "A-01-02-04", warehouse: "Main Warehouse", zone: "A", rack: "01", shelf: "02", bin: "04", type: "picking", capacity: 500, usedCapacity: 500, status: "full" },
-  { id: "3", code: "B-02-01-01", warehouse: "Main Warehouse", zone: "B", rack: "02", shelf: "01", bin: "01", type: "storage", capacity: 1000, usedCapacity: 280, status: "available" },
-  { id: "4", code: "C-01-03-02", warehouse: "Secondary Warehouse", zone: "C", rack: "01", shelf: "03", bin: "02", type: "storage", capacity: 2000, usedCapacity: 1200, status: "available" },
-  { id: "5", code: "STG-001", warehouse: "Main Warehouse", zone: "Staging", rack: "-", shelf: "-", bin: "-", type: "staging", capacity: 5000, usedCapacity: 1500, status: "available" },
-  { id: "6", code: "RCV-001", warehouse: "Main Warehouse", zone: "Receiving", rack: "-", shelf: "-", bin: "-", type: "receiving", capacity: 3000, usedCapacity: 0, status: "available" },
-  { id: "7", code: "D-01-02-01", warehouse: "Main Warehouse", zone: "D", rack: "01", shelf: "02", bin: "01", type: "picking", capacity: 300, usedCapacity: 300, status: "reserved" },
+  {
+    id: "1",
+    code: "A-01-02-03",
+    warehouse: "Main Warehouse",
+    zone: "A",
+    rack: "01",
+    shelf: "02",
+    bin: "03",
+    type: "picking",
+    capacity: 500,
+    usedCapacity: 250,
+    status: "available",
+  },
+  {
+    id: "2",
+    code: "A-01-02-04",
+    warehouse: "Main Warehouse",
+    zone: "A",
+    rack: "01",
+    shelf: "02",
+    bin: "04",
+    type: "picking",
+    capacity: 500,
+    usedCapacity: 500,
+    status: "full",
+  },
+  {
+    id: "3",
+    code: "B-02-01-01",
+    warehouse: "Main Warehouse",
+    zone: "B",
+    rack: "02",
+    shelf: "01",
+    bin: "01",
+    type: "storage",
+    capacity: 1000,
+    usedCapacity: 280,
+    status: "available",
+  },
+  {
+    id: "4",
+    code: "C-01-03-02",
+    warehouse: "Secondary Warehouse",
+    zone: "C",
+    rack: "01",
+    shelf: "03",
+    bin: "02",
+    type: "storage",
+    capacity: 2000,
+    usedCapacity: 1200,
+    status: "available",
+  },
+  {
+    id: "5",
+    code: "STG-001",
+    warehouse: "Main Warehouse",
+    zone: "Staging",
+    rack: "-",
+    shelf: "-",
+    bin: "-",
+    type: "staging",
+    capacity: 5000,
+    usedCapacity: 1500,
+    status: "available",
+  },
+  {
+    id: "6",
+    code: "RCV-001",
+    warehouse: "Main Warehouse",
+    zone: "Receiving",
+    rack: "-",
+    shelf: "-",
+    bin: "-",
+    type: "receiving",
+    capacity: 3000,
+    usedCapacity: 0,
+    status: "available",
+  },
+  {
+    id: "7",
+    code: "D-01-02-01",
+    warehouse: "Main Warehouse",
+    zone: "D",
+    rack: "01",
+    shelf: "02",
+    bin: "01",
+    type: "picking",
+    capacity: 300,
+    usedCapacity: 300,
+    status: "reserved",
+  },
 ];
 
 const reducer = (state: State, action: Action): State => {
@@ -74,7 +158,10 @@ const reducer = (state: State, action: Action): State => {
     case "SET_WAREHOUSE_FILTER":
       return { ...state, warehouseFilter: action.payload };
     case "DELETE_LOCATION":
-      return { ...state, locations: state.locations.filter((l) => l.id !== action.payload) };
+      return {
+        ...state,
+        locations: state.locations.filter((l) => l.id !== action.payload),
+      };
     case "ADD_LOCATION":
       return {
         ...state,
@@ -86,7 +173,9 @@ const reducer = (state: State, action: Action): State => {
     case "UPDATE_LOCATION":
       return {
         ...state,
-        locations: state.locations.map((l) => l.id === action.payload.id ? action.payload : l),
+        locations: state.locations.map((l) =>
+          l.id === action.payload.id ? action.payload : l
+        ),
       };
     default:
       return state;
@@ -101,86 +190,151 @@ const Locations = () => {
   });
 
   // Generate next location code
-  const nextLocationNumber = state.locations.length > 0
-    ? Math.max(...state.locations.map(l => {
-        const match = l.code.match(/\d+/);
-        return match ? parseInt(match[0]) : 0;
-      })) + 1
-    : 1;
-  const generatedLocationCode = `LOC-${nextLocationNumber.toString().padStart(3, "0")}`;
+  const nextLocationNumber =
+    state.locations.length > 0
+      ? Math.max(
+          ...state.locations.map((l) => {
+            const match = l.code.match(/\d+/);
+            return match ? parseInt(match[0]) : 0;
+          })
+        ) + 1
+      : 1;
+  const generatedLocationCode = `LOC-${nextLocationNumber
+    .toString()
+    .padStart(3, "0")}`;
 
   // Form fields configuration
   const locationFields: AddField<Location>[] = [
     { label: "Code (Auto)", name: "code", type: "text", disabled: true },
-    { 
-      label: "Warehouse", 
-      name: "warehouse", 
-      type: "select", 
+    {
+      label: "Warehouse",
+      name: "warehouse",
+      type: "select",
       required: true,
       options: [
         { value: "Main Warehouse", label: "Main Warehouse" },
         { value: "Secondary Warehouse", label: "Secondary Warehouse" },
-        { value: "Cold Storage", label: "Cold Storage" }
-      ]
+        { value: "Cold Storage", label: "Cold Storage" },
+      ],
     },
-    { label: "Zone", name: "zone", type: "text", placeholder: "e.g., A", required: true },
-    { label: "Rack", name: "rack", type: "text", placeholder: "e.g., 01", required: true },
-    { label: "Shelf", name: "shelf", type: "text", placeholder: "e.g., 02", required: true },
-    { label: "Bin", name: "bin", type: "text", placeholder: "e.g., 03", required: true },
-    { 
-      label: "Type", 
-      name: "type", 
-      type: "select", 
+    {
+      label: "Zone",
+      name: "zone",
+      type: "text",
+      placeholder: "e.g., A",
+      required: true,
+    },
+    {
+      label: "Rack",
+      name: "rack",
+      type: "text",
+      placeholder: "e.g., 01",
+      required: true,
+    },
+    {
+      label: "Shelf",
+      name: "shelf",
+      type: "text",
+      placeholder: "e.g., 02",
+      required: true,
+    },
+    {
+      label: "Bin",
+      name: "bin",
+      type: "text",
+      placeholder: "e.g., 03",
+      required: true,
+    },
+    {
+      label: "Type",
+      name: "type",
+      type: "select",
       required: true,
       options: [
         { value: "picking", label: "Picking" },
         { value: "storage", label: "Storage" },
         { value: "staging", label: "Staging" },
-        { value: "receiving", label: "Receiving" }
-      ]
+        { value: "receiving", label: "Receiving" },
+      ],
     },
-    { label: "Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
+    {
+      label: "Capacity",
+      name: "capacity",
+      type: "number",
+      placeholder: "0",
+      required: true,
+    },
   ];
 
   const editLocationFields: EditField<Location>[] = [
     { label: "Code", name: "code", type: "text", disabled: true },
-    { 
-      label: "Warehouse", 
-      name: "warehouse", 
-      type: "select", 
+    {
+      label: "Warehouse",
+      name: "warehouse",
+      type: "select",
       required: true,
       options: [
         { value: "Main Warehouse", label: "Main Warehouse" },
         { value: "Secondary Warehouse", label: "Secondary Warehouse" },
-        { value: "Cold Storage", label: "Cold Storage" }
-      ]
+        { value: "Cold Storage", label: "Cold Storage" },
+      ],
     },
-    { label: "Zone", name: "zone", type: "text", placeholder: "e.g., A", required: true },
-    { label: "Rack", name: "rack", type: "text", placeholder: "e.g., 01", required: true },
-    { label: "Shelf", name: "shelf", type: "text", placeholder: "e.g., 02", required: true },
-    { label: "Bin", name: "bin", type: "text", placeholder: "e.g., 03", required: true },
-    { 
-      label: "Type", 
-      name: "type", 
-      type: "select", 
+    {
+      label: "Zone",
+      name: "zone",
+      type: "text",
+      placeholder: "e.g., A",
+      required: true,
+    },
+    {
+      label: "Rack",
+      name: "rack",
+      type: "text",
+      placeholder: "e.g., 01",
+      required: true,
+    },
+    {
+      label: "Shelf",
+      name: "shelf",
+      type: "text",
+      placeholder: "e.g., 02",
+      required: true,
+    },
+    {
+      label: "Bin",
+      name: "bin",
+      type: "text",
+      placeholder: "e.g., 03",
+      required: true,
+    },
+    {
+      label: "Type",
+      name: "type",
+      type: "select",
       required: true,
       options: [
         { value: "picking", label: "Picking" },
         { value: "storage", label: "Storage" },
         { value: "staging", label: "Staging" },
-        { value: "receiving", label: "Receiving" }
-      ]
+        { value: "receiving", label: "Receiving" },
+      ],
     },
-    { label: "Capacity", name: "capacity", type: "number", placeholder: "0", required: true },
-    { 
-      label: "Status", 
-      name: "status", 
+    {
+      label: "Capacity",
+      name: "capacity",
+      type: "number",
+      placeholder: "0",
+      required: true,
+    },
+    {
+      label: "Status",
+      name: "status",
       type: "select",
       options: [
         { value: "available", label: "Available" },
         { value: "full", label: "Full" },
-        { value: "reserved", label: "Reserved" }
-      ]
+        { value: "reserved", label: "Reserved" },
+      ],
     },
   ];
 
@@ -206,12 +360,20 @@ const Locations = () => {
       staging: "bg-warning/10 text-warning",
       receiving: "bg-success/10 text-success",
     };
-    return <Badge variant="outline" className={cn("font-normal", config[type])}>{type}</Badge>;
+    return (
+      <Badge variant="outline" className={cn("font-normal", config[type])}>
+        {type}
+      </Badge>
+    );
   };
 
   const filteredLocations = state.locations.filter((loc) => {
-    const matchesSearch = loc.code.toLowerCase().includes(state.searchQuery.toLowerCase());
-    const matchesWarehouse = state.warehouseFilter === "all" || loc.warehouse.toLowerCase().includes(state.warehouseFilter.toLowerCase());
+    const matchesSearch = loc.code
+      .toLowerCase()
+      .includes(state.searchQuery.toLowerCase());
+    const matchesWarehouse =
+      state.warehouseFilter === "all" ||
+      loc.warehouse.toLowerCase().includes(state.warehouseFilter.toLowerCase());
     return matchesSearch && matchesWarehouse;
   });
 
@@ -221,7 +383,9 @@ const Locations = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Locations</h1>
-            <p className="page-description">Manage warehouse locations, zones, racks, and bins</p>
+            <p className="page-description">
+              Manage warehouse locations, zones, racks, and bins
+            </p>
           </div>
           <AddModal<Location>
             title="Add New Location"
@@ -240,7 +404,9 @@ const Locations = () => {
               usedCapacity: 0,
               status: "available",
             }}
-            onSubmit={(data) => dispatch({ type: "ADD_LOCATION", payload: data as Location })}
+            onSubmit={(data) =>
+              dispatch({ type: "ADD_LOCATION", payload: data as Location })
+            }
             triggerLabel="Add Location"
             submitLabel="Create Location"
             size="lg"
@@ -255,13 +421,17 @@ const Locations = () => {
             <Input
               placeholder="Search by location code..."
               value={state.searchQuery}
-              onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
+              onChange={(e) =>
+                dispatch({ type: "SET_SEARCH", payload: e.target.value })
+              }
               className="pl-10"
             />
           </div>
           <Select
             value={state.warehouseFilter}
-            onValueChange={(v) => dispatch({ type: "SET_WAREHOUSE_FILTER", payload: v })}
+            onValueChange={(v) =>
+              dispatch({ type: "SET_WAREHOUSE_FILTER", payload: v })
+            }
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Warehouse" />
@@ -293,17 +463,23 @@ const Locations = () => {
           </TableHeader>
           <TableBody>
             {filteredLocations.map((location) => {
-              const usagePercent = Math.round((location.usedCapacity / location.capacity) * 100);
+              const usagePercent = Math.round(
+                (location.usedCapacity / location.capacity) * 100
+              );
               return (
                 <TableRow key={location.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary" />
-                      <span className="font-mono font-medium">{location.code}</span>
+                      <span className="font-mono font-medium">
+                        {location.code}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-normal">{location.warehouse}</Badge>
+                    <Badge variant="outline" className="font-normal">
+                      {location.warehouse}
+                    </Badge>
                   </TableCell>
                   <TableCell>{location.zone}</TableCell>
                   <TableCell>{getTypeBadge(location.type)}</TableCell>
@@ -311,7 +487,10 @@ const Locations = () => {
                     <div className="flex items-center gap-3">
                       <Progress
                         value={usagePercent}
-                        className={cn("h-2 w-20", getCapacityColor(usagePercent))}
+                        className={cn(
+                          "h-2 w-20",
+                          getCapacityColor(usagePercent)
+                        )}
                       />
                       <span className="text-sm text-muted-foreground w-16">
                         {location.usedCapacity}/{location.capacity}
@@ -326,26 +505,41 @@ const Locations = () => {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
+
+                      <DropdownMenuContent align="end" className="p-2">
+                        <div className="flex flex-col gap-2 w-full">
+                          {/* Edit Button */}
                           <EditModal<Location>
                             title="Edit Location"
                             description="Update location details"
                             fields={editLocationFields}
                             data={location}
-                            onSubmit={(data) => dispatch({ type: "UPDATE_LOCATION", payload: data as Location })}
+                            onSubmit={(data) =>
+                              dispatch({
+                                type: "UPDATE_LOCATION",
+                                payload: data as Location,
+                              })
+                            }
                             triggerLabel="Edit"
-                            triggerSize="sm"
+                            triggerSize="default"
                             submitLabel="Update Location"
                             size="lg"
                           />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => dispatch({ type: "DELETE_LOCATION", payload: location.id })}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />Delete
-                        </DropdownMenuItem>
+
+                          {/* Delete Button */}
+                          <DeleteModal
+                            title="Delete Location"
+                            description={`Are you sure you want to delete the location "${location.code}"? This action cannot be undone.`}
+                            onSubmit={() =>
+                              dispatch({
+                                type: "DELETE_LOCATION",
+                                payload: location.id,
+                              })
+                            }
+                            triggerLabel="Delete"
+                            triggerSize="default"
+                          />
+                        </div>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

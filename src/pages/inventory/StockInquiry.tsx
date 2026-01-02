@@ -1,15 +1,15 @@
-import { useReducer } from "react";
+import AddModal from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
+import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTable, ColumnDef } from "@/components/table/DataTable";
-import { Eye, MoreHorizontal, Search, Trash2 } from "lucide-react";
-import AddModal from "@/components/modals/AddModal";
-import EditModal, { EditField } from "@/components/modals/EditModal";
+import { MoreHorizontal, Search } from "lucide-react";
+import { useReducer } from "react";
 
 interface StockRecord {
   id: string;
@@ -67,19 +67,60 @@ const subCategoryOptions = [
 ];
 
 const initialRecords: StockRecord[] = [
-  { id: "1", psc: "PSC-001", anNo: "AN-12345", barcode: "1234567890123", description: "Widget A - Premium Model", igNo: "IG001", brand: "acme", category: "electronics", group: "group_a", subCategory: "sub_1" },
-  { id: "2", psc: "PSC-002", anNo: "AN-12346", barcode: "1234567890124", description: "Widget B - Standard Model", igNo: "IG002", brand: "globex", category: "electronics", group: "group_b", subCategory: "sub_2" },
-  { id: "3", psc: "PSC-003", anNo: "AN-12347", barcode: "1234567890125", description: "Office Chair Deluxe", igNo: "IG003", brand: "initech", category: "furniture", group: "group_a", subCategory: "sub_3" },
+  {
+    id: "1",
+    psc: "PSC-001",
+    anNo: "AN-12345",
+    barcode: "1234567890123",
+    description: "Widget A - Premium Model",
+    igNo: "IG001",
+    brand: "acme",
+    category: "electronics",
+    group: "group_a",
+    subCategory: "sub_1",
+  },
+  {
+    id: "2",
+    psc: "PSC-002",
+    anNo: "AN-12346",
+    barcode: "1234567890124",
+    description: "Widget B - Standard Model",
+    igNo: "IG002",
+    brand: "globex",
+    category: "electronics",
+    group: "group_b",
+    subCategory: "sub_2",
+  },
+  {
+    id: "3",
+    psc: "PSC-003",
+    anNo: "AN-12347",
+    barcode: "1234567890125",
+    description: "Office Chair Deluxe",
+    igNo: "IG003",
+    brand: "initech",
+    category: "furniture",
+    group: "group_a",
+    subCategory: "sub_3",
+  },
 ];
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "DELETE_RECORD":
-      return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+      return {
+        ...state,
+        records: state.records.filter((r) => r.id !== action.payload),
+      };
     case "ADD_RECORD":
       return { ...state, records: [action.payload, ...state.records] };
     case "UPDATE_RECORD":
-      return { ...state, records: state.records.map(r => r.id === action.payload.id ? action.payload : r) };
+      return {
+        ...state,
+        records: state.records.map((r) =>
+          r.id === action.payload.id ? action.payload : r
+        ),
+      };
     default:
       return state;
   }
@@ -93,62 +134,123 @@ export default function StockInquiry() {
     { label: "AN No", name: "anNo", type: "text", required: true },
     { label: "Barcode", name: "barcode", type: "text", required: true },
     { label: "Description", name: "description", type: "text", required: true },
-    { label: "IG No", name: "igNo", type: "select", required: true, options: igNoOptions },
-    { label: "Brand", name: "brand", type: "select", required: true, options: brandOptions },
-    { label: "Category", name: "category", type: "select", required: true, options: categoryOptions },
-    { label: "Group", name: "group", type: "select", required: true, options: groupOptions },
-    { label: "Sub-Category", name: "subCategory", type: "select", required: true, options: subCategoryOptions },
+    {
+      label: "IG No",
+      name: "igNo",
+      type: "select",
+      required: true,
+      options: igNoOptions,
+    },
+    {
+      label: "Brand",
+      name: "brand",
+      type: "select",
+      required: true,
+      options: brandOptions,
+    },
+    {
+      label: "Category",
+      name: "category",
+      type: "select",
+      required: true,
+      options: categoryOptions,
+    },
+    {
+      label: "Group",
+      name: "group",
+      type: "select",
+      required: true,
+      options: groupOptions,
+    },
+    {
+      label: "Sub-Category",
+      name: "subCategory",
+      type: "select",
+      required: true,
+      options: subCategoryOptions,
+    },
   ];
 
   const columns: ColumnDef<StockRecord>[] = [
-    { key: "psc", label: "PSC", sortable: true, filterable: true, className: "font-mono font-medium" },
-    { key: "anNo", label: "AN No", sortable: true, filterable: true, className: "font-mono" },
-    { key: "barcode", label: "Barcode", sortable: true, filterable: true, className: "font-mono text-muted-foreground" },
-    { key: "description", label: "Description", sortable: true, filterable: true },
-    { 
-      key: "igNo", 
-      label: "IG No", 
-      sortable: true, 
+    {
+      key: "psc",
+      label: "PSC",
+      sortable: true,
+      filterable: true,
+      className: "font-mono font-medium",
+    },
+    {
+      key: "anNo",
+      label: "AN No",
+      sortable: true,
+      filterable: true,
+      className: "font-mono",
+    },
+    {
+      key: "barcode",
+      label: "Barcode",
+      sortable: true,
+      filterable: true,
+      className: "font-mono text-muted-foreground",
+    },
+    {
+      key: "description",
+      label: "Description",
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: "igNo",
+      label: "IG No",
+      sortable: true,
       filterable: true,
       filterType: "select",
       filterOptions: igNoOptions,
-      render: (row) => igNoOptions.find(i => i.value === row.igNo)?.label.split(" - ")[0] || row.igNo
+      render: (row) =>
+        igNoOptions.find((i) => i.value === row.igNo)?.label.split(" - ")[0] ||
+        row.igNo,
     },
-    { 
-      key: "brand", 
-      label: "Brand", 
-      sortable: true, 
+    {
+      key: "brand",
+      label: "Brand",
+      sortable: true,
       filterable: true,
       filterType: "select",
       filterOptions: brandOptions,
-      render: (row) => brandOptions.find(b => b.value === row.brand)?.label || row.brand
+      render: (row) =>
+        brandOptions.find((b) => b.value === row.brand)?.label || row.brand,
     },
-    { 
-      key: "category", 
-      label: "Category", 
-      sortable: true, 
+    {
+      key: "category",
+      label: "Category",
+      sortable: true,
       filterable: true,
       filterType: "select",
       filterOptions: categoryOptions,
-      render: (row) => categoryOptions.find(c => c.value === row.category)?.label || row.category
+      render: (row) =>
+        categoryOptions.find((c) => c.value === row.category)?.label ||
+        row.category,
     },
-    { 
-      key: "group", 
-      label: "Group", 
-      sortable: true, 
+    {
+      key: "group",
+      label: "Group",
+      sortable: true,
       filterable: true,
       filterType: "select",
       filterOptions: groupOptions,
-      render: (row) => groupOptions.find(g => g.value === row.group)?.label || row.group
+      render: (row) =>
+        groupOptions.find((g) => g.value === row.group)?.label || row.group,
     },
-    { 
-      key: "subCategory", 
-      label: "Sub-Category", 
-      sortable: true, 
+    {
+      key: "subCategory",
+      label: "Sub-Category",
+      sortable: true,
       filterable: true,
       filterType: "select",
       filterOptions: subCategoryOptions,
-      render: (row) => subCategoryOptions.find(s => s.value === row.subCategory)?.label || row.subCategory
+      render: (row) =>
+        subCategoryOptions.find((s) => s.value === row.subCategory)?.label ||
+        row.subCategory,
     },
   ];
 
@@ -159,29 +261,35 @@ export default function StockInquiry() {
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-popover">
-        <DropdownMenuItem asChild>
+
+      <DropdownMenuContent align="end" className="p-2">
+        <div className="flex flex-col gap-2 w-full">
+          {/* Edit Button */}
           <EditModal<StockRecord>
             title="Edit Stock Record"
             description="Update stock inquiry record"
             fields={editFields}
             data={record}
-            onSubmit={(data) => dispatch({ type: "UPDATE_RECORD", payload: data as StockRecord })}
+            onSubmit={(data) =>
+              dispatch({ type: "UPDATE_RECORD", payload: data as StockRecord })
+            }
             triggerLabel="Edit"
-            triggerSize="sm"
+            triggerSize="default"
             submitLabel="Update Record"
             size="lg"
           />
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Eye className="h-4 w-4 mr-2" /> View
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-destructive"
-          onClick={() => dispatch({ type: "DELETE_RECORD", payload: record.id })}
-        >
-          <Trash2 className="h-4 w-4 mr-2" /> Delete
-        </DropdownMenuItem>
+
+          {/* Delete Button */}
+          <DeleteModal
+            title="Delete Stock Record"
+            description={`Are you sure you want to delete the stock record "${record.id}"? This action cannot be undone.`}
+            onSubmit={() =>
+              dispatch({ type: "DELETE_RECORD", payload: record.id })
+            }
+            triggerLabel="Delete"
+            triggerSize="default"
+          />
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -192,29 +300,84 @@ export default function StockInquiry() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Stock Inquiry</h1>
-            <p className="page-description">Search and view product stock information</p>
+            <p className="page-description">
+              Search and view product stock information
+            </p>
           </div>
           <AddModal<StockRecord>
             title="New Stock Entry"
             description="Add a new stock inquiry record"
             fields={[
-              { label: "PSC", name: "psc", type: "text", required: true, placeholder: "e.g. PSC-001" },
-              { label: "AN No", name: "anNo", type: "text", required: true, placeholder: "e.g. AN-12345" },
-              { label: "Barcode", name: "barcode", type: "text", required: true, placeholder: "13-digit barcode" },
-              { label: "Description", name: "description", type: "text", required: true },
-              { label: "IG No", name: "igNo", type: "select", required: true, options: igNoOptions },
-              { label: "Brand", name: "brand", type: "select", required: true, options: brandOptions },
-              { label: "Category", name: "category", type: "select", required: true, options: categoryOptions },
-              { label: "Group", name: "group", type: "select", required: true, options: groupOptions },
-              { label: "Sub-Category", name: "subCategory", type: "select", required: true, options: subCategoryOptions },
+              {
+                label: "PSC",
+                name: "psc",
+                type: "text",
+                required: true,
+                placeholder: "e.g. PSC-001",
+              },
+              {
+                label: "AN No",
+                name: "anNo",
+                type: "text",
+                required: true,
+                placeholder: "e.g. AN-12345",
+              },
+              {
+                label: "Barcode",
+                name: "barcode",
+                type: "text",
+                required: true,
+                placeholder: "13-digit barcode",
+              },
+              {
+                label: "Description",
+                name: "description",
+                type: "text",
+                required: true,
+              },
+              {
+                label: "IG No",
+                name: "igNo",
+                type: "select",
+                required: true,
+                options: igNoOptions,
+              },
+              {
+                label: "Brand",
+                name: "brand",
+                type: "select",
+                required: true,
+                options: brandOptions,
+              },
+              {
+                label: "Category",
+                name: "category",
+                type: "select",
+                required: true,
+                options: categoryOptions,
+              },
+              {
+                label: "Group",
+                name: "group",
+                type: "select",
+                required: true,
+                options: groupOptions,
+              },
+              {
+                label: "Sub-Category",
+                name: "subCategory",
+                type: "select",
+                required: true,
+                options: subCategoryOptions,
+              },
             ]}
             onSubmit={(data) => {
-              dispatch({ 
-                type: "ADD_RECORD", 
-                payload: { 
-                  ...data, 
+              dispatch({
+                type: "ADD_RECORD",
+                payload: {
+                  ...data,
                   id: crypto.randomUUID(),
-                } as StockRecord 
+                } as StockRecord,
               });
             }}
             triggerLabel="New Entry"
@@ -243,7 +406,9 @@ export default function StockInquiry() {
             </div>
             <div>
               <p className="stat-label">Categories</p>
-              <p className="stat-value">{new Set(state.records.map(r => r.category)).size}</p>
+              <p className="stat-value">
+                {new Set(state.records.map((r) => r.category)).size}
+              </p>
             </div>
           </div>
         </div>
@@ -254,7 +419,9 @@ export default function StockInquiry() {
             </div>
             <div>
               <p className="stat-label">Brands</p>
-              <p className="stat-value">{new Set(state.records.map(r => r.brand)).size}</p>
+              <p className="stat-value">
+                {new Set(state.records.map((r) => r.brand)).size}
+              </p>
             </div>
           </div>
         </div>

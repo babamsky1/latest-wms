@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,9 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Edit, AlertCircle, Loader2 } from "lucide-react";
-import { useEffect, useState, ReactNode } from "react";
+import { AlertCircle, Edit, Loader2 } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
 
 export interface EditField<T> {
   label: string;
@@ -156,7 +156,7 @@ const EditModal = <T extends object>({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size={triggerSize}>
+        <Button variant="ghost" size={triggerSize} className="justify-start">
           {triggerIcon || <Edit className="h-4 w-4 mr-2" />}
           {triggerLabel}
         </Button>
