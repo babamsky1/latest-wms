@@ -118,17 +118,15 @@ const InventoryReport = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Inventory Reports</h1>
-            <p className="page-description">Generate and analyze inventory reports</p>
-          </div>
-          <Button>
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Inventory Reports</h1>
+          <p className="page-description">Generate and analyze inventory reports</p>
         </div>
+        <Button>
+          <Download className="h-4 w-4 mr-2" />
+          Export Report
+        </Button>
       </div>
 
       {/* Stats Cards */}

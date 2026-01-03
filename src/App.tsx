@@ -2,44 +2,43 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
+import { DevTools } from "./components/dev/DevTools";
 import { MainLayout } from "./components/layout/MainLayout";
+import { WmsProvider } from "./context/WmsContext";
 
-// Import all your page components
-import Settings from "./pages/admin/Settings";
-import Users from "./pages/admin/UserManagement";
-import Suppliers from "./pages/contacts/Suppliers";
+// Import page components
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import Adjustments from "./pages/inventory/Adjustments";
-import Overview from "./pages/inventory/Overview";
-import StockBuffering from "./pages/inventory/StockBuffering";
-import StockIn from "./pages/inventory/StockIn";
-import StockInquiry from "./pages/inventory/StockInquiry";
-import StockLocationInquiry from "./pages/inventory/StockLocationInquiry";
-import StockOut from "./pages/inventory/StockOut";
-import Transfers from "./pages/inventory/Transfers";
+import InventoryReport from "./pages/InventoryReport";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import Orders from "./pages/operations/Orders";
-import Receiving from "./pages/operations/Receiving";
-import Returns from "./pages/operations/Returns";
-import Shipping from "./pages/operations/Shipping";
-import AllProducts from "./pages/products/AllProducts";
-import Categories from "./pages/products/Categories";
-import InventoryReport from "./pages/reports/InventoryReport";
-import LowStocks from "./pages/reports/LowStocks";
-import Movements from "./pages/reports/StockMovements";
-import Locations from "./pages/warehouse/Locations";
-import Warehouses from "./pages/warehouse/Warehouses";
+import OrderMonitoring from "./pages/OrderMonitoring";
+import AllocationSummary from "./pages/order-completion/AllocationSummary";
+import BarcoderAssignment from "./pages/order-completion/BarcoderAssignment";
+import CheckerAssignment from "./pages/order-completion/CheckerAssignment";
+import PickerAssignment from "./pages/order-completion/PickerAssignment";
+import TaggerAssignment from "./pages/order-completion/TaggerAssignment";
+import TransferAssignment from "./pages/order-completion/TransferAssignment";
+import Adjustments from "./pages/stock-management/Adjustments";
+import StockBuffering from "./pages/stock-management/StockBuffering";
+import StockInquiry from "./pages/stock-management/StockInquiry";
+import StockLocationInquiry from "./pages/stock-management/StockLocationInquiry";
+import Transfers from "./pages/stock-management/Transfers";
+import Withdrawal from "./pages/stock-management/Withdrawal";
+import PurchaseOrder from "./pages/supplier/PurchaseOrder";
+import SupplierDelivery from "./pages/supplier/SupplierDelivery";
+import SupplierProfile from "./pages/supplier/SupplierProfile";
 import { QueryProvider } from "./providers/QueryProvider";
 
 const App = () => (
   <QueryProvider>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <WmsProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        {/* DevTools now sits inside the <BrowserRouter> provided by main.tsx */}
+        <DevTools />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
@@ -47,34 +46,31 @@ const App = () => (
           {/* Protected Routes with Layout */}
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/products/allproducts" element={<AllProducts />} />
-            <Route path="/products/categories" element={<Categories />} />
-            <Route path="/inventory/overview" element={<Overview />} />
-            <Route path="/inventory/adjustments" element={<Adjustments />} />
-            <Route path="/inventory/stock-inquiry" element={<StockInquiry />} />
-            <Route path="/inventory/stock-location-inquiry" element={<StockLocationInquiry />} />
-            <Route path="/inventory/stock-buffering" element={<StockBuffering />} />
-            <Route path="/inventory/stock-in" element={<StockIn />} />
-            <Route path="/inventory/stock-out" element={<StockOut />} />
-            <Route path="/inventory/transfers" element={<Transfers />} />
-            <Route path="/warehouse/warehouses" element={<Warehouses />} />
-            <Route path="/warehouse/locations" element={<Locations />} />
-            <Route path="/operations/receiving" element={<Receiving />} />
-            <Route path="/operations/shipping" element={<Shipping />} />
-            <Route path="/operations/returns" element={<Returns />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/reports/movements" element={<Movements />} />
-            <Route path="/reports/low-stocks" element={<LowStocks />} />
+            
+            {/* Stock Management */}
+            <Route path="/stock-management/stock-buffering" element={<StockBuffering />} />
+            <Route path="/stock-management/stock-inquiry" element={<StockInquiry />} />
+            <Route path="/stock-management/stock-location-inquiry" element={<StockLocationInquiry />} />
+            <Route path="/stock-management/adjustments" element={<Adjustments />} />
+            <Route path="/stock-management/withdrawal" element={<Withdrawal />} />
+            <Route path="/stock-management/transfers" element={<Transfers />} />        
+            <Route path="/operations/monitoring" element={<OrderMonitoring />} />
+            <Route path="/order-completion/allocation" element={<AllocationSummary />} />
+            <Route path="/order-completion/picker" element={<PickerAssignment />} />
+            <Route path="/order-completion/barcoder" element={<BarcoderAssignment />} />
+            <Route path="/order-completion/tagger" element={<TaggerAssignment />} />
+            <Route path="/order-completion/checker" element={<CheckerAssignment />} />
+            <Route path="/order-completion/transfer" element={<TransferAssignment />} />
+            <Route path="/supplier/delivery" element={<SupplierDelivery />} />
+            <Route path="/supplier/profile" element={<SupplierProfile />} />
+            <Route path="/supplier/purchase-order" element={<PurchaseOrder />} />
             <Route path="/reports/inventory" element={<InventoryReport />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/settings" element={<Settings />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+      </TooltipProvider>
+    </WmsProvider>
   </QueryProvider>
 );
 

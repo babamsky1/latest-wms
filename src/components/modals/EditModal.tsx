@@ -1,16 +1,17 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { AlertCircle, Edit, Loader2 } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 
@@ -24,6 +25,7 @@ export interface EditField<T> {
   required?: boolean;
   validation?: (value: unknown) => string | null;
   helperText?: string;
+  fullWidth?: boolean;
 }
 
 interface EditModalProps<T> {
@@ -39,7 +41,10 @@ interface EditModalProps<T> {
   isOpen?: boolean;
   data: Partial<T>;
   successMessage?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  columns?: 1 | 2;
+  triggerClassName?: string;
+  customTrigger?: ReactNode;
 }
 
 const EditModal = <T extends object>({
@@ -56,6 +61,9 @@ const EditModal = <T extends object>({
   data,
   successMessage,
   size = "md",
+  columns = 1,
+  triggerClassName,
+  customTrigger,
 }: EditModalProps<T>) => {
   const [isOpen, setIsOpen] = useState(controlledIsOpen ?? false);
   const [formData, setFormData] = useState<Partial<T>>(data || {});
@@ -67,6 +75,8 @@ const EditModal = <T extends object>({
     sm: "max-w-sm",
     md: "max-w-md",
     lg: "max-w-lg",
+    xl: "max-w-2xl",
+    "2xl": "max-w-4xl",
   };
 
   useEffect(() => {
@@ -156,10 +166,16 @@ const EditModal = <T extends object>({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size={triggerSize} className="justify-start">
-          {triggerIcon || <Edit className="h-4 w-4 mr-2" />}
-          {triggerLabel}
-        </Button>
+        {customTrigger || (
+          <Button 
+            variant="ghost" 
+            size={triggerSize} 
+            className={cn("justify-start", triggerClassName)}
+          >
+            {triggerIcon || <Edit className="h-4 w-4 mr-2" />}
+            {triggerLabel}
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className={maxWidth[size]}>
@@ -178,9 +194,18 @@ const EditModal = <T extends object>({
             </Alert>
           )}
 
-          <div className="space-y-4 py-4">
+          <div className={cn(
+            "py-4",
+            columns === 1 ? "space-y-4" : "grid grid-cols-2 gap-4"
+          )}>
             {fields.map((field) => (
-              <div key={String(field.name)} className="grid gap-2">
+              <div 
+                key={String(field.name)} 
+                className={cn(
+                  "grid gap-2",
+                  field.fullWidth && columns > 1 && "col-span-2"
+                )}
+              >
                 <Label htmlFor={String(field.name)}>
                   {field.label}
                   {field.required && (

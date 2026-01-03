@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,9 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, AlertCircle, Loader2 } from "lucide-react";
-import { useEffect, useState, ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { AlertCircle, Loader2, Plus } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
 
 export interface AddField<T> {
   label: string;
@@ -24,6 +25,7 @@ export interface AddField<T> {
   required?: boolean;
   validation?: (value: unknown) => string | null;
   helperText?: string;
+  fullWidth?: boolean;
 }
 
 interface FormModalProps<T> {
@@ -39,7 +41,8 @@ interface FormModalProps<T> {
   isOpen?: boolean;
   initialData?: Partial<T>;
   successMessage?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  columns?: 1 | 2;
 }
 
 const AddModal = <T extends object>({
@@ -56,6 +59,7 @@ const AddModal = <T extends object>({
   initialData,
   successMessage,
   size = "md",
+  columns = 1,
 }: FormModalProps<T>) => {
   const [isOpen, setIsOpen] = useState(controlledIsOpen ?? false);
   const [formData, setFormData] = useState<Partial<T>>(initialData || {});
@@ -67,6 +71,8 @@ const AddModal = <T extends object>({
     sm: "max-w-sm",
     md: "max-w-md",
     lg: "max-w-lg",
+    xl: "max-w-2xl",
+    "2xl": "max-w-4xl",
   };
 
   useEffect(() => {
@@ -178,9 +184,18 @@ const AddModal = <T extends object>({
             </Alert>
           )}
 
-          <div className="space-y-4 py-4">
+          <div className={cn(
+            "py-4",
+            columns === 1 ? "space-y-4" : "grid grid-cols-2 gap-4"
+          )}>
             {fields.map((field) => (
-              <div key={String(field.name)} className="grid gap-2">
+              <div 
+                key={String(field.name)} 
+                className={cn(
+                  "grid gap-2",
+                  field.fullWidth && columns > 1 && "col-span-2"
+                )}
+              >
                 <Label htmlFor={String(field.name)}>
                   {field.label}
                   {field.required && (
