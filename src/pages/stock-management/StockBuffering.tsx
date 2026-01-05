@@ -8,6 +8,7 @@ import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { ItemMasterRecord, useWms } from "@/context/WmsContext";
 import { Box, DollarSign, ListFilter, Tag } from "lucide-react";
+import { BRANDS, BRAND_OPTIONS, CATEGORIES, CATEGORY_OPTIONS } from "@/constants";
 
 export default function StockBuffering() {
   const { items, addItem, updateItem, deleteItem } = useWms();
@@ -22,19 +23,13 @@ export default function StockBuffering() {
     { label: "Product Type", name: "productType", type: "text", required: true },
     { label: "IG Description", name: "igDescription", type: "text", fullWidth: true },
     // Class
-    { label: "Brand", name: "brand", type: "select", options: ["BW", "KLIK", "OMG", "ORO"].map(b => ({value: b, label: b})), required: true },
-    { 
-      label: "Category", 
-      name: "category", 
-      type: "select", 
-      options: [
-        { value: "Paint", label: "Paint" },
-        { value: "Ink", label: "Ink" },
-        { value: "Paper", label: "Paper" },
-        { value: "Supplies", label: "Supplies" },
-        { value: "Chemicals", label: "Chemicals" }
-      ],
-      required: true 
+    { label: "Brand", name: "brand", type: "select", options: BRAND_OPTIONS, required: true },
+    {
+      label: "Category",
+      name: "category",
+      type: "select",
+      options: CATEGORY_OPTIONS,
+      required: true
     },
     { label: "Color", name: "color", type: "text" },
     // Price
@@ -44,18 +39,28 @@ export default function StockBuffering() {
 
   const columns: ColumnDef<ItemMasterRecord>[] = [
     { key: "psc", label: "PSC", className: "font-mono font-bold text-primary" },
-    { 
-      key: "shortDescription", 
-      label: "Description", 
+    {
+      key: "shortDescription",
+      label: "Description",
       className: "font-medium",
       render: (row) => (
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {row.shortDescription}
           {row.isTestData && <DevBadge />}
+          {row.id.startsWith('SB-') && <Badge variant="success" className="text-xs">AUTO</Badge>}
         </div>
       )
     },
     { key: "brand", label: "Brand", render: (row) => <Badge variant="outline">{row.brand}</Badge> },
+    {
+      key: "source",
+      label: "Source",
+      render: (row) => (
+        <Badge variant={row.id.startsWith('SB-') ? "success" : "default"}>
+          {row.id.startsWith('SB-') ? "Auto (Assignments)" : "Manual"}
+        </Badge>
+      )
+    },
     { key: "category", label: "Category" },
     { key: "size", label: "Size" },
     { key: "color", label: "Color" },
@@ -73,7 +78,7 @@ export default function StockBuffering() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Stock Buffering</h1>
-          <p className="page-description">Maintain core product definitions and master data</p>
+          <p className="page-description">Product master data - auto-created from completed assignments or manually added</p>
         </div>
         <AddModal<ItemMasterRecord>
           title="New Item"
@@ -89,9 +94,9 @@ export default function StockBuffering() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Items" value={items.length} icon={Box} variant="primary" />
-        <StatCard label="Active Brands" value={new Set(items.map(i => i.brand)).size} icon={Tag} variant="info" />
-        <StatCard label="Avg. Margin" value="45%" icon={DollarSign} variant="success" />
-        <StatCard label="Categories" value={new Set(items.map(i => i.category)).size} icon={ListFilter} variant="default" />
+        <StatCard label="Auto-Created" value={items.filter(i => i.id.startsWith('SB-')).length} icon={Tag} variant="success" />
+        <StatCard label="Manual" value={items.filter(i => !i.id.startsWith('SB-')).length} icon={ListFilter} variant="info" />
+        <StatCard label="Active Brands" value={new Set(items.map(i => i.brand)).size} icon={DollarSign} variant="default" />
       </div>
 
       <DataTable

@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useContext, useState } from "react";
+import { CUSTOMERS, SUPPLIERS, WAREHOUSES } from "@/constants";
 
 // --- Interfaces ---
 
@@ -30,7 +31,9 @@ export interface PurchaseOrderRecord {
   poNumber: string;
   orderDate: string;
   supplierName: string;
-  expectedDate: string;
+  itemCode: string;
+  quantity: number;
+  unitPrice: number;
   totalAmount: number;
   status: "Draft" | "Pending" | "Approved" | "Received";
   priority: "Low" | "Medium" | "High";
@@ -92,15 +95,19 @@ export interface CustomerReturnRecord {
 export interface DeliveryRecord {
   id: string;
   referenceNo: string;
+  poNumber?: string; // Original PO number for linking assignments
   transferDate: string;
   supplierCode: string;
+  itemCode: string;
+  quantity: number;
   packingNo: string;
   containerNo: string;
   transferType: "Local" | "International";
-  status: "Open" | "Pending" | "Done";
+  status: "Open" | "Pending" | "Done" | "Received" | "For Approval";
   warehouse: string;
   createdBy: string;
   createdAt: string;
+  approvedAt?: string;
   updatedBy: string;
   updatedAt: string;
   isTestData?: boolean;
@@ -172,6 +179,7 @@ export interface PickerRecord {
   id: string;
   seriesNo: string;
   poNo: string;
+  deliveryReference?: string; // Delivery reference number from Supplier Delivery
   poBrand: string;
   customerName: string;
   routeCode: string;
@@ -183,11 +191,15 @@ export interface PickerRecord {
   receivedBy: string;
   // Status type now allows "No Assignment" for display purposes
   status: "No Assignment" | "Assigned" | "Picking" | "Picked";
-  totalQty: number;
+  totalQty: number; // Required quantity
+  countedQty: number; // Actually counted/picked quantity
   whReceiveDate: string;
   approvedBy: string;
   assignedStaff?: string;
   plRemarks: string;
+  // Stock source tracking - assignments not limited to supplier deliveries
+  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
+  sourceReference: string; // PO #, Transfer ID, etc.
   isTestData?: boolean;
 }
 
@@ -196,6 +208,7 @@ export interface BarcoderRecord {
   id: string;
   seriesNo: string;
   poNo: string;
+  deliveryReference?: string; // Delivery reference number from Supplier Delivery
   poBrand: string;
   customerName: string;
   routeCode: string;
@@ -209,6 +222,11 @@ export interface BarcoderRecord {
   receivedBy: string;
   status: "Pending" | "Scanning" | "Scanned";
   assignedStaff?: string;
+  // Stock source tracking
+  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
+  sourceReference: string;
+  totalQty: number; // Required quantity
+  countedQty: number; // Actually scanned quantity
   isTestData?: boolean;
 }
 
@@ -216,6 +234,7 @@ export interface TaggerRecord {
   id: string;
   seriesNo: string;
   poNo: string;
+  deliveryReference?: string; // Delivery reference number from Supplier Delivery
   poBrand: string;
   customerName: string;
   routeCode: string;
@@ -225,6 +244,11 @@ export interface TaggerRecord {
   status: "Pending" | "Tagging" | "Tagged";
   approvedBy: string;
   assignedStaff?: string;
+  // Stock source tracking
+  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
+  sourceReference: string;
+  totalQty: number; // Required quantity
+  countedQty: number; // Actually tagged quantity
   isTestData?: boolean;
 }
 
@@ -232,10 +256,16 @@ export interface CheckerRecord {
   id: string;
   seriesNo: string;
   poNo: string;
+  deliveryReference?: string; // Delivery reference number from Supplier Delivery
   customerName: string;
   status: "Pending" | "Checking" | "Checked";
   assignedStaff?: string;
   lastVerified?: string;
+  // Stock source tracking
+  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
+  sourceReference: string;
+  totalQty: number; // Required quantity
+  countedQty: number; // Actually verified quantity
   isTestData?: boolean;
 }
 
@@ -414,17 +444,17 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
     }
   ]);
 
-  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([
-    {
-      id: "1",
-      supplierCode: "SUP-001",
-      supplierName: "TechPro Solutions",
-      companyName: "TechPro Philippines Inc.",
-      supplierType: "Local",
-      company: "Main Corp",
-      status: "Active",
-    }
-  ]);
+  const [suppliers, setSuppliers] = useState<SupplierRecord[]>(
+    SUPPLIERS.map((sup, index) => ({
+      id: (index + 1).toString(),
+      supplierCode: sup.code,
+      supplierName: sup.name,
+      companyName: sup.companyName,
+      supplierType: sup.type,
+      company: sup.company,
+      status: "Active" as const,
+    }))
+  );
 
   const [transfers, setTransfers] = useState<TransferRecord[]>([
     {
@@ -464,6 +494,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       id: "1",
       seriesNo: "P-1001",
       poNo: "PO-9921",
+      deliveryReference: "DEL-8801",
       poBrand: "KLIK",
       customerName: "SM Supermarket",
       routeCode: "RT-01",
@@ -476,9 +507,60 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       assignedStaff: "", // No staff assigned
       status: "No Assignment" as "No Assignment", // <-- explicitly cast
       totalQty: 1500,
+      countedQty: 0,
       whReceiveDate: "2024-01-03",
       approvedBy: "Admin",
       plRemarks: "Handle with care",
+      stockSource: "Supplier Delivery",
+      sourceReference: "DEL-8801",
+    },
+    {
+      id: "2",
+      seriesNo: "P-1002",
+      poNo: "PO-9922",
+      deliveryReference: "DEL-8802",
+      poBrand: "OMG",
+      customerName: "Robinsons Retail",
+      routeCode: "RT-02",
+      dateApproved: "2024-01-03",
+      approvedTime: "09:00:00",
+      deliverySchedule: "2024-01-06",
+      priorityLevel: "Medium",
+      transferType: "Standard",
+      receivedBy: "Jane Picker",
+      assignedStaff: "Alice Williams",
+      status: "Assigned",
+      totalQty: 800,
+      countedQty: 0,
+      whReceiveDate: "2024-01-03",
+      approvedBy: "Admin",
+      plRemarks: "Standard handling",
+      stockSource: "Internal Transfer",
+      sourceReference: "TRF-001",
+    },
+    {
+      id: "3",
+      seriesNo: "P-1003",
+      poNo: "PO-9923",
+      deliveryReference: "DEL-8803",
+      poBrand: "BW",
+      customerName: "Puregold Price Club",
+      routeCode: "RT-03",
+      dateApproved: "2024-01-03",
+      approvedTime: "10:15:00",
+      deliverySchedule: "2024-01-07",
+      priorityLevel: "Low",
+      transferType: "Standard",
+      receivedBy: "Bob Picker",
+      assignedStaff: "",
+      status: "No Assignment",
+      totalQty: 1200,
+      countedQty: 0,
+      whReceiveDate: "2024-01-03",
+      approvedBy: "Admin",
+      plRemarks: "Bulk order",
+      stockSource: "Adjustment",
+      sourceReference: "ADJ-001",
     }
   ]);
 
@@ -489,6 +571,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       id: "1",
       seriesNo: "B-2001",
       poNo: "PO-7712",
+      deliveryReference: "DEL-8802",
       poBrand: "OMG",
       customerName: "Robinsons Retail",
       routeCode: "RT-05",
@@ -501,6 +584,34 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       approvedBy: "Manager",
       receivedBy: "John Doe",
       status: "Pending",
+      assignedStaff: "",
+      stockSource: "Supplier Delivery",
+      sourceReference: "DEL-8802",
+      totalQty: 600,
+      countedQty: 0,
+    },
+    {
+      id: "2",
+      seriesNo: "B-2002",
+      poNo: "PO-7713",
+      deliveryReference: "DEL-8804",
+      poBrand: "KLIK",
+      customerName: "SM Supermarket",
+      routeCode: "RT-01",
+      barcoderName: "Bob Barcoder",
+      deliverySchedule: "2024-01-05",
+      dateApproved: "2024-01-03",
+      approvedTime: "10:30:00",
+      priorityLevel: "High",
+      transferType: "Standard",
+      approvedBy: "Admin",
+      receivedBy: "Jane Smith",
+      status: "Pending",
+      assignedStaff: "Michael Brown",
+      stockSource: "Internal Transfer",
+      sourceReference: "TRF-002",
+      totalQty: 450,
+      countedQty: 0,
     }
   ]);
 
@@ -509,6 +620,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       id: "1",
       seriesNo: "T-3001",
       poNo: "PO-6621",
+      deliveryReference: "DEL-8803",
       poBrand: "ORO",
       customerName: "SM Supermarket",
       routeCode: "RT-02",
@@ -517,6 +629,30 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       dateApproved: "2024-01-03",
       status: "Pending",
       approvedBy: "Admin",
+      assignedStaff: "",
+      stockSource: "Supplier Delivery",
+      sourceReference: "DEL-8803",
+      totalQty: 300,
+      countedQty: 0,
+    },
+    {
+      id: "2",
+      seriesNo: "T-3002",
+      poNo: "PO-6622",
+      deliveryReference: "DEL-8805",
+      poBrand: "BW",
+      customerName: "Robinsons Galleria",
+      routeCode: "RT-03",
+      priorityLevel: "Medium",
+      deliverySchedule: "2024-01-06",
+      dateApproved: "2024-01-03",
+      status: "Pending",
+      approvedBy: "Manager",
+      assignedStaff: "Alice Williams",
+      stockSource: "Customer Return",
+      sourceReference: "CR-1001",
+      totalQty: 150,
+      countedQty: 0,
     }
   ]);
 
@@ -525,8 +661,40 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       id: "1",
       seriesNo: "SER-CHK-001",
       poNo: "PO-77120",
+      deliveryReference: "DEL-8801",
       customerName: "SM Supermarket",
       status: "Pending",
+      assignedStaff: "",
+      stockSource: "Supplier Delivery",
+      sourceReference: "DEL-8801",
+      totalQty: 1500,
+      countedQty: 0,
+    },
+    {
+      id: "2",
+      seriesNo: "SER-CHK-002",
+      poNo: "PO-77121",
+      deliveryReference: "DEL-8802",
+      customerName: "Robinsons Retail",
+      status: "Pending",
+      assignedStaff: "Robert Garcia",
+      stockSource: "Internal Transfer",
+      sourceReference: "TRF-001",
+      totalQty: 800,
+      countedQty: 0,
+    },
+    {
+      id: "3",
+      seriesNo: "SER-CHK-003",
+      poNo: "PO-77122",
+      deliveryReference: "DEL-8803",
+      customerName: "Puregold Price Club",
+      status: "Pending",
+      assignedStaff: "",
+      stockSource: "Adjustment",
+      sourceReference: "ADJ-001",
+      totalQty: 1200,
+      countedQty: 0,
     }
   ]);
 
@@ -541,17 +709,28 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
     }
   ]);
 
-  const [warehouses] = useState<WarehouseMasterRecord[]>([
-    { id: "1", code: "WH-MAIN", name: "Main Warehouse", type: "Main", location: "Taguig", status: "Active" },
-    { id: "2", code: "WH-PROD", name: "TSD / Production", type: "Production", location: "Cavite", status: "Active" },
-    { id: "3", code: "WH-RET", name: "Retail Outlet", type: "Branch", location: "Makati", status: "Active" },
-  ]);
+  const [warehouses] = useState<WarehouseMasterRecord[]>(
+    WAREHOUSES.map((wh, index) => ({
+      id: (index + 1).toString(),
+      code: wh.code,
+      name: wh.name,
+      type: wh.type,
+      location: wh.location,
+      status: "Active" as const
+    }))
+  );
 
-  const [customers] = useState<CustomerMasterRecord[]>([
-    { id: "1", code: "CUST-001", name: "SM Megamall", company: "SM Prime Holdings", address: "Mandaluyong", type: "Retail", status: "Active" },
-    { id: "2", code: "CUST-002", name: "Robinsons Galleria", company: "Robinsons Land", address: "Ortigas", type: "Retail", status: "Active" },
-    { id: "3", code: "CUST-003", name: "Puregold Price Club", company: "Puregold", address: "Manila", type: "Wholesale", status: "Active" },
-  ]);
+  const [customers] = useState<CustomerMasterRecord[]>(
+    CUSTOMERS.map((cust, index) => ({
+      id: (index + 1).toString(),
+      code: cust.code,
+      name: cust.name,
+      company: cust.company,
+      address: cust.address,
+      type: cust.type,
+      status: "Active" as const
+    }))
+  );
 
   const [customerReturns, setCustomerReturns] = useState<CustomerReturnRecord[]>([
     {

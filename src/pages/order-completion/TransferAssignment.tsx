@@ -3,19 +3,25 @@ import EditModal from "@/components/modals/EditModal";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Button } from "@/components/ui/button";
 import { WorkflowButton, WorkflowTransition } from "@/components/workflow/WorkflowButton";
+import { DEFAULT_STAFF_COUNT, STAFF_MEMBERS } from "@/constants";
 import { TransferAssignmentRecord, useWms } from "@/context/WmsContext";
 import { ArrowLeftRight, ClipboardList, Truck, UserPlus } from "lucide-react";
 
-const staffList = [
-  { value: "John Doe", label: "John Doe" },
-  { value: "Jane Smith", label: "Jane Smith" },
-  { value: "Robert Garcia", label: "Robert Garcia" },
-  { value: "Alice Williams", label: "Alice Williams" },
-  { value: "Michael Brown", label: "Michael Brown" },
-];
-
 export default function TransferAssignment() {
-  const { transferAssignments: records, updateTransferAssignment } = useWms();
+  const { transferAssignments: records, updateTransferAssignment, transfers } = useWms();
+
+  // Function to check and update transfer status based on assignments
+  const updateTransferStatus = (transferId: string) => {
+    const assignment = records.find(r => r.transferId === transferId);
+    if (assignment && assignment.status === "Delivered") {
+      // Find the original transfer and mark it as completed
+      const transfer = transfers.find(t => t.id === transferId);
+      if (transfer && transfer.status !== "Done") {
+        // Note: This would need to be implemented in the context
+        console.log(`Transfer ${transferId} completed via assignment`);
+      }
+    }
+  };
 
   const transferTransitions: WorkflowTransition<TransferAssignmentRecord["status"]>[] = [
     { from: "Assigned", to: "On Delivery", label: "Start Delivery" },
@@ -49,14 +55,14 @@ export default function TransferAssignment() {
           title="Assign Staff"
           description="Select a staff member for this task"
           data={row}
-          fields={[{ name: "assignedStaff", label: "Staff Member", type: "select", options: staffList }]}
+          fields={[{ name: "assignedStaff", label: "Staff Member", type: "select", options: STAFF_MEMBERS }]}
           onSubmit={(data) => updateTransferAssignment(row.id, { assignedStaff: data.assignedStaff })}
           customTrigger={
             <Button variant="ghost" className="w-full justify-between py-2 px-3 group hover:bg-slate-50 border border-transparent hover:border-slate-200">
               {row.assignedStaff ? (
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
-                    {row.assignedStaff.split(" ").map((n) => n[0]).join("")}
+                    {row.assignedStaff.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                   <span className="text-sm font-medium">{row.assignedStaff}</span>
                 </div>
@@ -83,7 +89,7 @@ export default function TransferAssignment() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Active Drivers" value="3" icon={Truck} variant="primary" />
+        <StatCard label="Active Drivers" value={DEFAULT_STAFF_COUNT.DRIVERS.toString()} icon={Truck} variant="primary" />
         <StatCard label="Pending Transfers" value={records.filter((r) => r.status === "Assigned").length} icon={ClipboardList} variant="warning" />
         <StatCard label="Completed Today" value={records.filter((r) => r.status === "Delivered").length} icon={ArrowLeftRight} variant="success" />
       </div>
@@ -92,14 +98,22 @@ export default function TransferAssignment() {
         data={records}
         columns={columns}
         searchPlaceholder="Search transfers..."
-        actions={(row) => (
-          <WorkflowButton
-            transitions={transferTransitions}
-            currentStatus={row.assignedStaff ? row.status : "Assigned"}
-            isAssigned={!!row.assignedStaff}
-            onTransition={(nextStatus) => updateTransferAssignment(row.id, { status: nextStatus })}
-          />
-        )}
+        actions={(row) => {
+          const currentStatus: TransferAssignmentRecord["status"] = row.assignedStaff ? row.status : "Assigned";
+          return (
+            <WorkflowButton
+              transitions={transferTransitions}
+              currentStatus={currentStatus}
+              isAssigned={!!row.assignedStaff}
+              onTransition={(nextStatus) => {
+                updateTransferAssignment(row.id, { status: nextStatus });
+                if (nextStatus === "Delivered") {
+                  updateTransferStatus(row.transferId);
+                }
+              }}
+            />
+          );
+        }}
       />
     </div>
   );

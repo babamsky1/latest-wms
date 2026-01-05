@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Bell, ChevronDown } from "lucide-react";
+import { ADMIN_USER } from "@/constants";
 
 interface TopBarProps {
   title?: string;
@@ -64,12 +65,12 @@ export const TopBar = ({ title }: TopBarProps) => {
             <Button variant="ghost" className="flex items-center gap-2 pl-2 pr-3">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  JD
+                  {ADMIN_USER.name.split(" ").map(n => n[0]).join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start text-sm">
-                <span className="font-medium">John Doe</span>
-                <span className="text-xs text-muted-foreground">Admin</span>
+                <span className="font-medium">{ADMIN_USER.name}</span>
+                <span className="text-xs text-muted-foreground">{ADMIN_USER.title}</span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
