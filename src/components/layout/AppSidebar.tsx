@@ -26,6 +26,7 @@ import {
   Package,
   PackageMinus,
   QrCode,
+  RotateCcw,
   Scale,
   Settings,
   ShieldCheck,
@@ -62,7 +63,7 @@ const NavItem = ({ to, icon, label, badge, isCollapsed }: NavItemProps) => {
       {isActive && (
         <div className="absolute left-0 w-1 h-6 bg-sidebar-primary rounded-r-full" />
       )}
-      
+
       <div className={cn(
         "flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
         isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70 group-hover:text-sidebar-primary"
@@ -194,10 +195,16 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
               label="Stock Location Inquiry"
               isCollapsed={isCollapsed}
             />
-             <NavItem
+            <NavItem
               to="/stock-management/adjustments"
               icon={<Scale className="h-4 w-4" />}
               label="Adjustments"
+              isCollapsed={isCollapsed}
+            />
+            <NavItem
+              to="/stock-management/customer-returns"
+              icon={<RotateCcw className="h-4 w-4" />}
+              label="Customer Returns"
               isCollapsed={isCollapsed}
             />
             <NavItem
@@ -282,18 +289,18 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             />
           </NavGroup>
 
-            <NavItem
-              to="/operations/monitoring"
-              icon={<Activity className="h-4 w-4" />}
-              label="Order Monitoring"
-              isCollapsed={isCollapsed}
-            />
-            <NavItem
-              to="/reports/inventory"
-              icon={<ClipboardList className="h-4 w-4" />}
-              label="Inventory Report"
-              isCollapsed={isCollapsed}
-            />
+          <NavItem
+            to="/operations/monitoring"
+            icon={<Activity className="h-4 w-4" />}
+            label="Order Monitoring"
+            isCollapsed={isCollapsed}
+          />
+          <NavItem
+            to="/reports/inventory"
+            icon={<ClipboardList className="h-4 w-4" />}
+            label="Inventory Report"
+            isCollapsed={isCollapsed}
+          />
         </nav>
       </ScrollArea>
 
@@ -314,12 +321,12 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             </div>
           )}
           {!isCollapsed && (
-             <Button variant="ghost" size="icon" className="h-8 w-8 text-sidebar-foreground/50 hover:text-sidebar-accent-foreground">
-                <Settings className="h-4 w-4" />
-             </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-sidebar-foreground/50 hover:text-sidebar-accent-foreground">
+              <Settings className="h-4 w-4" />
+            </Button>
           )}
         </div>
-        
+
         <Separator className="my-4 bg-sidebar-border/50" />
 
         <Button

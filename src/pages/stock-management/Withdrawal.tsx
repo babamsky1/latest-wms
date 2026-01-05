@@ -19,18 +19,19 @@ import { useWms, WithdrawalRecord } from "@/context/WmsContext";
 import { ArrowUpCircle, CheckCircle2, Clock } from "lucide-react";
 
 export default function Withdrawal() {
-  const { withdrawals: records, addWithdrawal, updateWithdrawal, deleteWithdrawal } = useWms();
+  const { withdrawals: records, addWithdrawal, updateWithdrawal, deleteWithdrawal, warehouses, items } = useWms();
 
   const addFields: AddField<WithdrawalRecord>[] = [
-    { label: "Category", name: "category", type: "select", options: [{value: "Acetone", label: "Acetone"}, {value: "Industrial", label: "Industrial"}], required: true },
-    { label: "Warehouse", name: "warehouse", type: "text", required: true },
+    { label: "PSC (Item)", name: "psc", type: "datalist", options: items.map(i => ({ value: i.psc, label: `${i.psc} - i.shortDescription` })), required: true },
+    { label: "Category", name: "category", type: "select", options: [{ value: "Acetone", label: "Acetone" }, { value: "Industrial", label: "Industrial" }], required: true },
+    { label: "Warehouse", name: "warehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
     { label: "Transfer Date", name: "transferDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
   ];
 
   const columns: ColumnDef<WithdrawalRecord>[] = [
-    { 
-      key: "referenceNo", 
-      label: "Reference #", 
+    {
+      key: "referenceNo",
+      label: "Reference #",
       className: "font-mono font-bold",
       render: (row) => (
         <div className="flex items-center">
@@ -39,6 +40,7 @@ export default function Withdrawal() {
         </div>
       )
     },
+    { key: "psc", label: "PSC", className: "font-mono font-bold" },
     { key: "transferDate", label: "Transfer Date" },
     { key: "category", label: "Category" },
     { key: "warehouse", label: "Warehouse" },
@@ -73,17 +75,17 @@ export default function Withdrawal() {
           title="New Withdrawal"
           fields={addFields}
           onSubmit={(data) => {
-             const newRec: WithdrawalRecord = {
-               ...data as WithdrawalRecord,
-               id: Date.now().toString(),
-               referenceNo: `WTH-${String(records.length + 1).padStart(3, "0")}`,
-               status: "Open",
-               createdBy: "admin",
-               createdAt: new Date().toLocaleString(),
-               updatedBy: "admin",
-               updatedAt: new Date().toLocaleString(),
-             };
-             addWithdrawal(newRec);
+            const newRec: WithdrawalRecord = {
+              ...data as WithdrawalRecord,
+              id: Date.now().toString(),
+              referenceNo: `WTH-${String(records.length + 1).padStart(3, "0")}`,
+              status: "Open",
+              createdBy: "admin",
+              createdAt: new Date().toLocaleString(),
+              updatedBy: "admin",
+              updatedAt: new Date().toLocaleString(),
+            };
+            addWithdrawal(newRec);
           }}
           triggerLabel="New Withdrawal"
         />
@@ -118,7 +120,7 @@ export default function Withdrawal() {
                 triggerLabel="Delete"
               />
               <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
-                 Post
+                Post
               </Button>
             </ActionMenu>
           );

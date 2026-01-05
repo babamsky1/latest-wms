@@ -19,21 +19,21 @@ import { DeliveryRecord, useWms } from "@/context/WmsContext";
 import { CheckCircle2, Clock, Truck } from "lucide-react";
 
 export default function SupplierDelivery() {
-  const { deliveries: records, addDelivery, updateDelivery, deleteDelivery } = useWms();
+  const { deliveries: records, addDelivery, updateDelivery, deleteDelivery, warehouses, suppliers } = useWms();
 
   const addFields: AddField<DeliveryRecord>[] = [
-    { label: "Supplier Code", name: "supplierCode", type: "text", required: true },
+    { label: "Supplier", name: "supplierCode", type: "select", options: suppliers.map(s => ({ value: s.supplierCode, label: s.supplierName })), required: true },
     { label: "Packing #", name: "packingNo", type: "text", required: true },
     { label: "Container No", name: "containerNo", type: "text", required: true },
-    { label: "Transfer Type", name: "transferType", type: "select", options: [{value: "Local", label: "Local"}, {value: "International", label: "International"}], required: true },
-    { label: "Warehouse", name: "warehouse", type: "text", required: true },
+    { label: "Transfer Type", name: "transferType", type: "select", options: [{ value: "Local", label: "Local" }, { value: "International", label: "International" }], required: true },
+    { label: "Warehouse", name: "warehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
     { label: "Transfer Date", name: "transferDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
   ];
 
   const columns: ColumnDef<DeliveryRecord>[] = [
-    { 
-      key: "referenceNo", 
-      label: "Reference #", 
+    {
+      key: "referenceNo",
+      label: "Reference #",
       className: "font-mono font-bold",
       render: (row) => (
         <div className="flex items-center">
@@ -46,8 +46,8 @@ export default function SupplierDelivery() {
     { key: "supplierCode", label: "Supplier", className: "font-mono" },
     { key: "packingNo", label: "Packing #" },
     { key: "containerNo", label: "Container #" },
-    { 
-      key: "transferType", 
+    {
+      key: "transferType",
       label: "Type",
       render: (row) => <Badge variant={row.transferType === 'International' ? 'default' : 'secondary'}>{row.transferType}</Badge>
     },
@@ -82,17 +82,17 @@ export default function SupplierDelivery() {
           title="New Delivery Record"
           fields={addFields}
           onSubmit={(data) => {
-             const newRec: DeliveryRecord = {
-               ...data as DeliveryRecord,
-               id: Date.now().toString(),
-               referenceNo: `DEL-${String(records.length + 1).padStart(3, "0")}`,
-               status: "Open",
-               createdBy: "admin",
-               createdAt: new Date().toLocaleString(),
-               updatedBy: "admin",
-               updatedAt: new Date().toLocaleString(),
-             };
-             addDelivery(newRec);
+            const newRec: DeliveryRecord = {
+              ...data as DeliveryRecord,
+              id: Date.now().toString(),
+              referenceNo: `DEL-${String(records.length + 1).padStart(3, "0")}`,
+              status: "Open",
+              createdBy: "admin",
+              createdAt: new Date().toLocaleString(),
+              updatedBy: "admin",
+              updatedAt: new Date().toLocaleString(),
+            };
+            addDelivery(newRec);
           }}
           triggerLabel="New Delivery"
         />
@@ -127,7 +127,7 @@ export default function SupplierDelivery() {
                 triggerLabel="Delete"
               />
               <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
-                 Post
+                Post
               </Button>
             </ActionMenu>
           );

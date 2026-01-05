@@ -19,22 +19,21 @@ import { TransferRecord, useWms } from "@/context/WmsContext";
 import { ArrowRightLeft, CheckCircle2, Clock } from "lucide-react";
 
 export default function Transfers() {
-  const { transfers: records, addTransfer, updateTransfer, deleteTransfer } = useWms();
-
-  const warehouses = ["Main Warehouse", "Regional Hub", "Outlet Store", "POS Warehouse"];
+  const { transfers: records, addTransfer, updateTransfer, deleteTransfer, warehouses, items } = useWms();
 
   const addFields: AddField<TransferRecord>[] = [
+    { label: "PSC (Item)", name: "psc", type: "datalist", options: items.map(i => ({ value: i.psc, label: `${i.psc} - ${i.shortDescription}` })), required: true },
     { label: "Transfer Date", name: "transferDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
     { label: "Needed Date", name: "neededDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
-    { label: "Source Warehouse", name: "sourceWarehouse", type: "select", options: warehouses.map(w => ({value: w, label: w})), required: true },
-    { label: "Destination Warehouse", name: "destinationWarehouse", type: "select", options: warehouses.map(w => ({value: w, label: w})), required: true },
+    { label: "Source Warehouse", name: "sourceWarehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
+    { label: "Destination Warehouse", name: "destinationWarehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
     { label: "Requested By", name: "requestedBy", type: "text", required: true },
   ];
 
   const columns: ColumnDef<TransferRecord>[] = [
-    { 
-      key: "referenceNo", 
-      label: "Reference #", 
+    {
+      key: "referenceNo",
+      label: "Reference #",
       className: "font-mono font-bold",
       render: (row) => (
         <div className="flex items-center">
@@ -43,6 +42,7 @@ export default function Transfers() {
         </div>
       )
     },
+    { key: "psc", label: "PSC", className: "font-mono font-bold" },
     { key: "transferDate", label: "Date" },
     { key: "neededDate", label: "Needed" },
     { key: "sourceWarehouse", label: "Source" },
@@ -80,15 +80,15 @@ export default function Transfers() {
           title="New Transfer"
           fields={addFields}
           onSubmit={(data) => {
-             const newRec: TransferRecord = {
-               ...data as TransferRecord,
-               id: Date.now().toString(),
-               referenceNo: `TRF-${String(records.length + 1).padStart(3, "0")}`,
-               status: "Open",
-               updatedBy: "admin",
-               updatedAt: new Date().toLocaleString(),
-             };
-             addTransfer(newRec);
+            const newRec: TransferRecord = {
+              ...data as TransferRecord,
+              id: Date.now().toString(),
+              referenceNo: `TRF-${String(records.length + 1).padStart(3, "0")}`,
+              status: "Open",
+              updatedBy: "admin",
+              updatedAt: new Date().toLocaleString(),
+            };
+            addTransfer(newRec);
           }}
           triggerLabel="New Transfer"
         />
@@ -123,7 +123,7 @@ export default function Transfers() {
                 triggerLabel="Delete"
               />
               <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "For Approval" })}>
-                 Send for Approval
+                Send for Approval
               </Button>
             </ActionMenu>
           );

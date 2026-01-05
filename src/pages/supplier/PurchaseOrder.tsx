@@ -20,20 +20,20 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, Clock, ShoppingCart } from "lucide-react";
 
 export default function PurchaseOrder() {
-  const { purchaseOrders: records, addPO, updatePO, deletePO } = useWms();
+  const { purchaseOrders: records, addPO, updatePO, deletePO, suppliers } = useWms();
 
   const addFields: AddField<PurchaseOrderRecord>[] = [
-    { label: "Supplier Name", name: "supplierName", type: "text", required: true },
+    { label: "Supplier", name: "supplierName", type: "select", options: suppliers.map(s => ({ value: s.supplierName, label: s.supplierName })), required: true },
     { label: "Total Amount", name: "totalAmount", type: "number", required: true },
-    { label: "Priority", name: "priority", type: "select", options: [{value: "Low", label: "Low"}, {value: "Medium", label: "Medium"}, {value: "High", label: "High"}], required: true },
+    { label: "Priority", name: "priority", type: "select", options: [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }], required: true },
     { label: "Order Date", name: "orderDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
     { label: "Expected Delivery", name: "expectedDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
   ];
 
   const columns: ColumnDef<PurchaseOrderRecord>[] = [
-    { 
-      key: "poNumber", 
-      label: "PO #", 
+    {
+      key: "poNumber",
+      label: "PO #",
       className: "font-mono font-bold",
       render: (row) => (
         <div className="flex items-center">
@@ -45,9 +45,9 @@ export default function PurchaseOrder() {
     { key: "orderDate", label: "Order Date" },
     { key: "supplierName", label: "Supplier" },
     { key: "expectedDate", label: "Expected Date" },
-    { 
-      key: "totalAmount", 
-      label: "Amount", 
+    {
+      key: "totalAmount",
+      label: "Amount",
       className: "font-bold",
       render: (row) => `₱${row.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
     },
@@ -94,17 +94,17 @@ export default function PurchaseOrder() {
           title="Create New Purchase Order"
           fields={addFields}
           onSubmit={(data) => {
-             const newRec: PurchaseOrderRecord = {
-               ...data as PurchaseOrderRecord,
-               id: Date.now().toString(),
-               poNumber: `PO-${24000 + records.length + 1}`,
-               status: "Draft",
-               createdBy: "admin",
-               createdAt: new Date().toLocaleString(),
-               updatedBy: "admin",
-               updatedAt: new Date().toLocaleString(),
-             };
-             addPO(newRec);
+            const newRec: PurchaseOrderRecord = {
+              ...data as PurchaseOrderRecord,
+              id: Date.now().toString(),
+              poNumber: `PO-${24000 + records.length + 1}`,
+              status: "Draft",
+              createdBy: "admin",
+              createdAt: new Date().toLocaleString(),
+              updatedBy: "admin",
+              updatedAt: new Date().toLocaleString(),
+            };
+            addPO(newRec);
           }}
           triggerLabel="New PO"
         />
@@ -139,7 +139,7 @@ export default function PurchaseOrder() {
                 triggerLabel="Delete"
               />
               <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
-                 Submit for Approval
+                Submit for Approval
               </Button>
             </ActionMenu>
           );

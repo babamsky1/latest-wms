@@ -43,6 +43,7 @@ export interface PurchaseOrderRecord {
 
 export interface AdjustmentRecord {
   id: string;
+  psc: string;
   referenceNo: string;
   adjustmentDate: string;
   sourceReference: string;
@@ -58,6 +59,7 @@ export interface AdjustmentRecord {
 
 export interface WithdrawalRecord {
   id: string;
+  psc: string;
   referenceNo: string;
   transferDate: string;
   category: "Acetone" | "Industrial" | "Consumables";
@@ -67,6 +69,23 @@ export interface WithdrawalRecord {
   createdAt: string;
   updatedBy: string;
   updatedAt: string;
+  isTestData?: boolean;
+}
+
+// New Customer Return Record interface
+export interface CustomerReturnRecord {
+  id: string;
+  psc: string;
+  referenceNo: string;
+  customerCode: string;
+  customerName: string;
+  company: string;
+  warehouse: string;
+  status: "Done" | "Open" | "For Segregation";
+  amountTotal: number;
+  reason: ("OVERSTOCK" | "DAMAGED" | "EXPIRED" | "BAD ORDER" | "PULL OUT")[];
+  createdBy: string;
+  createdAt: string;
   isTestData?: boolean;
 }
 
@@ -98,8 +117,29 @@ export interface SupplierRecord {
   isTestData?: boolean;
 }
 
+export interface WarehouseMasterRecord {
+  id: string;
+  code: string;
+  name: string;
+  type: "Main" | "Branch" | "Production" | "Third Party";
+  location: string;
+  capacity?: number;
+  status: "Active" | "Inactive";
+}
+
+export interface CustomerMasterRecord {
+  id: string;
+  code: string;
+  name: string;
+  company: string;
+  address: string;
+  type: "Retail" | "Wholesale" | "Distributor";
+  status: "Active" | "Inactive";
+}
+
 export interface TransferRecord {
   id: string;
+  psc: string;
   referenceNo: string;
   transferDate: string;
   neededDate: string;
@@ -227,6 +267,11 @@ interface WmsContextType {
   taggers: TaggerRecord[];
   checkers: CheckerRecord[];
   transferAssignments: TransferAssignmentRecord[];
+  customerReturns: CustomerReturnRecord[];
+
+  // Master Data Lists
+  warehouses: WarehouseMasterRecord[];
+  customers: CustomerMasterRecord[];
 
   // Actions
   addItem: (item: ItemMasterRecord) => void;
@@ -266,6 +311,10 @@ interface WmsContextType {
   updateTagger: (id: string, data: Partial<TaggerRecord>) => void;
   updateChecker: (id: string, data: Partial<CheckerRecord>) => void;
   updateTransferAssignment: (id: string, data: Partial<TransferAssignmentRecord>) => void;
+
+  addCustomerReturn: (cr: CustomerReturnRecord) => void;
+  updateCustomerReturn: (id: string, data: Partial<CustomerReturnRecord>) => void;
+  deleteCustomerReturn: (id: string) => void;
 }
 
 const WmsContext = createContext<WmsContextType | undefined>(undefined);
@@ -317,6 +366,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
   const [adjustments, setAdjustments] = useState<AdjustmentRecord[]>([
     {
       id: "1",
+      psc: "PSC-1001",
       referenceNo: "ADJ-001",
       adjustmentDate: "2024-01-02",
       sourceReference: "PO-8821",
@@ -333,6 +383,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([
     {
       id: "1",
+      psc: "PSC-1001",
       referenceNo: "WTH-001",
       transferDate: "2024-01-02",
       category: "Acetone",
@@ -378,6 +429,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
   const [transfers, setTransfers] = useState<TransferRecord[]>([
     {
       id: "1",
+      psc: "PSC-1001",
       referenceNo: "TRF-001",
       transferDate: "2024-01-04",
       neededDate: "2024-01-06",
@@ -489,6 +541,35 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
     }
   ]);
 
+  const [warehouses] = useState<WarehouseMasterRecord[]>([
+    { id: "1", code: "WH-MAIN", name: "Main Warehouse", type: "Main", location: "Taguig", status: "Active" },
+    { id: "2", code: "WH-PROD", name: "TSD / Production", type: "Production", location: "Cavite", status: "Active" },
+    { id: "3", code: "WH-RET", name: "Retail Outlet", type: "Branch", location: "Makati", status: "Active" },
+  ]);
+
+  const [customers] = useState<CustomerMasterRecord[]>([
+    { id: "1", code: "CUST-001", name: "SM Megamall", company: "SM Prime Holdings", address: "Mandaluyong", type: "Retail", status: "Active" },
+    { id: "2", code: "CUST-002", name: "Robinsons Galleria", company: "Robinsons Land", address: "Ortigas", type: "Retail", status: "Active" },
+    { id: "3", code: "CUST-003", name: "Puregold Price Club", company: "Puregold", address: "Manila", type: "Wholesale", status: "Active" },
+  ]);
+
+  const [customerReturns, setCustomerReturns] = useState<CustomerReturnRecord[]>([
+    {
+      id: "1",
+      psc: "PSC-1001",
+      referenceNo: "CR-1001",
+      customerCode: "CUST-001",
+      customerName: "SM Megamall",
+      company: "SM Prime Holdings",
+      warehouse: "Main Warehouse",
+      status: "Open",
+      amountTotal: 5000.00,
+      reason: ["DAMAGED"],
+      createdBy: "Admin",
+      createdAt: "2024-01-05 10:00",
+    }
+  ]);
+
   // --- Actions Implementation ---
 
   const addItem = (item: ItemMasterRecord) => setItems(p => [item, ...p]);
@@ -506,6 +587,11 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
   const addWithdrawal = (w: WithdrawalRecord) => setWithdrawals(p => [w, ...p]);
   const updateWithdrawal = (id: string, data: Partial<WithdrawalRecord>) => setWithdrawals(p => p.map(i => i.id === id ? { ...i, ...data } : i));
   const deleteWithdrawal = (id: string) => setWithdrawals(p => p.filter(i => i.id !== id));
+
+  // Actions for Customer Returns
+  const addCustomerReturn = (cr: CustomerReturnRecord) => setCustomerReturns(p => [cr, ...p]);
+  const updateCustomerReturn = (id: string, data: Partial<CustomerReturnRecord>) => setCustomerReturns(p => p.map(i => i.id === id ? { ...i, ...data } : i));
+  const deleteCustomerReturn = (id: string) => setCustomerReturns(p => p.filter(i => i.id !== id));
 
   const addDelivery = (d: DeliveryRecord) => setDeliveries(p => [d, ...p]);
   const updateDelivery = (id: string, data: Partial<DeliveryRecord>) => setDeliveries(p => p.map(i => i.id === id ? { ...i, ...data } : i));
@@ -532,11 +618,14 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
   return (
     <WmsContext.Provider value={{
       items, purchaseOrders, adjustments, withdrawals, deliveries, suppliers, transfers, orders,
-      pickers, barcoders, taggers, checkers, transferAssignments,
+      pickers, barcoders, taggers, checkers, transferAssignments, customerReturns,
+      warehouses, customers,
       addItem, updateItem, deleteItem,
       addPO, updatePO, deletePO,
       addAdjustment, updateAdjustment, deleteAdjustment,
       addWithdrawal, updateWithdrawal, deleteWithdrawal,
+      // Customer Return actions
+      addCustomerReturn, updateCustomerReturn, deleteCustomerReturn,
       addDelivery, updateDelivery, deleteDelivery,
       addSupplier, updateSupplier, deleteSupplier,
       addTransfer, updateTransfer, deleteTransfer,

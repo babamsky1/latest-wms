@@ -19,22 +19,22 @@ import { AdjustmentRecord, useWms } from "@/context/WmsContext";
 import { CheckCircle2, Clock, Scale } from "lucide-react";
 
 export default function Adjustments() {
-  const { adjustments, addAdjustment, updateAdjustment, deleteAdjustment } = useWms();
+  const { adjustments, addAdjustment, updateAdjustment, deleteAdjustment, warehouses, items } = useWms();
 
   const categories = ["For JO", "For Zero Out", "Sample and Retention", "Wrong Encode"];
   const statuses = ["Open", "Pending", "Done"];
 
   const addFields: AddField<AdjustmentRecord>[] = [
-    { label: "Source Reference", name: "sourceReference", type: "text", required: true },
+    { label: "PSC (Item)", name: "psc", type: "datalist", options: items.map(i => ({ value: i.psc, label: `${i.psc} - ${i.shortDescription}` })), required: true },
     { label: "Category", name: "category", type: "select", options: categories.map(c => ({ value: c, label: c })), required: true },
-    { label: "Warehouse", name: "warehouse", type: "text", required: true },
+    { label: "Warehouse", name: "warehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
     { label: "Adjustment Date", name: "adjustmentDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
   ];
 
   const columns: ColumnDef<AdjustmentRecord>[] = [
-    { 
-      key: "referenceNo", 
-      label: "Reference #", 
+    {
+      key: "referenceNo",
+      label: "Reference #",
       className: "font-mono font-bold",
       render: (row) => (
         <div className="flex items-center">
@@ -43,6 +43,7 @@ export default function Adjustments() {
         </div>
       )
     },
+    { key: "psc", label: "PSC", className: "font-mono font-bold" },
     { key: "adjustmentDate", label: "Adjustment Date" },
     { key: "sourceReference", label: "Source Ref", className: "font-mono" },
     { key: "category", label: "Category" },
@@ -64,7 +65,7 @@ export default function Adjustments() {
   ];
 
   const handleUpdate = (id: string, data: Partial<AdjustmentRecord>) => {
-     updateAdjustment(id, { ...data, updatedAt: new Date().toLocaleString(), updatedBy: "admin" });
+    updateAdjustment(id, { ...data, updatedAt: new Date().toLocaleString(), updatedBy: "admin" });
   };
 
   const handleDelete = (id: string) => {
@@ -83,14 +84,14 @@ export default function Adjustments() {
           fields={addFields}
           onSubmit={(data) => {
             const newAdj: AdjustmentRecord = {
-               ...data as AdjustmentRecord,
-               id: Date.now().toString(),
-               referenceNo: `ADJ-${String(adjustments.length + 1).padStart(3, "0")}`,
-               status: "Open",
-               createdBy: "admin",
-               createdAt: new Date().toLocaleString(),
-               updatedBy: "admin",
-               updatedAt: new Date().toLocaleString(),
+              ...data as AdjustmentRecord,
+              id: Date.now().toString(),
+              referenceNo: `ADJ-${String(adjustments.length + 1).padStart(3, "0")}`,
+              status: "Open",
+              createdBy: "admin",
+              createdAt: new Date().toLocaleString(),
+              updatedBy: "admin",
+              updatedAt: new Date().toLocaleString(),
             };
             addAdjustment(newAdj);
           }}
@@ -111,7 +112,7 @@ export default function Adjustments() {
         actions={(row) => {
           const isLocked = row.status === "Pending" || row.status === "Done";
           if (isLocked) return <Badge variant="secondary">STATUS LOCKED</Badge>;
-          
+
           return (
             <ActionMenu>
               <EditModal<AdjustmentRecord>
@@ -127,7 +128,7 @@ export default function Adjustments() {
                 triggerLabel="Delete"
               />
               <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
-                 Post
+                Post
               </Button>
             </ActionMenu>
           );

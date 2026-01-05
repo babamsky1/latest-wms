@@ -18,7 +18,7 @@ import { ReactNode, useEffect, useState } from "react";
 export interface AddField<T> {
   label: string;
   name: keyof T;
-  type?: "text" | "number" | "email" | "password" | "select" | "textarea";
+  type?: "text" | "number" | "email" | "password" | "select" | "textarea" | "datalist";
   placeholder?: string;
   disabled?: boolean;
   options?: { value: string; label: string }[];
@@ -189,8 +189,8 @@ const AddModal = <T extends object>({
             columns === 1 ? "space-y-4" : "grid grid-cols-2 gap-4"
           )}>
             {fields.map((field) => (
-              <div 
-                key={String(field.name)} 
+              <div
+                key={String(field.name)}
                 className={cn(
                   "grid gap-2",
                   field.fullWidth && columns > 1 && "col-span-2"
@@ -206,11 +206,10 @@ const AddModal = <T extends object>({
                 {field.type === "select" ? (
                   <select
                     id={String(field.name)}
-                    className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
-                      errors[String(field.name)]
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-input"
-                    }`}
+                    className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors[String(field.name)]
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-input"
+                      }`}
                     value={String(formData[field.name] ?? "")}
                     onChange={(e) =>
                       handleChange(field.name, e.target.value)
@@ -227,11 +226,10 @@ const AddModal = <T extends object>({
                 ) : field.type === "textarea" ? (
                   <textarea
                     id={String(field.name)}
-                    className={`flex min-h-24 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
-                      errors[String(field.name)]
+                    className={`flex min-h-24 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors[String(field.name)]
                         ? "border-red-500 focus:ring-red-500"
                         : "border-input"
-                    }`}
+                      }`}
                     value={String(formData[field.name] ?? "")}
                     placeholder={field.placeholder}
                     disabled={field.disabled || isLoading}
@@ -239,6 +237,29 @@ const AddModal = <T extends object>({
                       handleChange(field.name, e.target.value)
                     }
                   />
+                ) : field.type === "datalist" ? (
+                  <>
+                    <Input
+                      id={String(field.name)}
+                      list={`${String(field.name)}-list`}
+                      value={String(formData[field.name] ?? "")}
+                      placeholder={field.placeholder || `Type or select ${field.label}`}
+                      disabled={field.disabled || isLoading}
+                      className={
+                        errors[String(field.name)]
+                          ? "border-red-500 focus:ring-red-500"
+                          : ""
+                      }
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                    <datalist id={`${String(field.name)}-list`}>
+                      {field.options?.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </datalist>
+                  </>
                 ) : (
                   <Input
                     id={String(field.name)}
