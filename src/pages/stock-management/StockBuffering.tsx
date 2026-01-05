@@ -6,9 +6,9 @@ import EditModal, { EditField } from "@/components/modals/EditModal";
 import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { ItemMasterRecord, useWms } from "@/context/WmsContext";
+import { BRAND_OPTIONS, CATEGORY_OPTIONS } from "@/constants/assignment";
+import { ItemMasterRecord, useWms } from "@/hooks/useWms";
 import { Box, DollarSign, ListFilter, Tag } from "lucide-react";
-import { BRANDS, BRAND_OPTIONS, CATEGORIES, CATEGORY_OPTIONS } from "@/constants";
 
 export default function StockBuffering() {
   const { items, addItem, updateItem, deleteItem } = useWms();

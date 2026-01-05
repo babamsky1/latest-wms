@@ -9,49 +9,48 @@
 
 import { StatCard } from "@/components/dashboard/StatCard";
 import { DevBadge } from "@/components/dev/DevTools";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { useWms } from "@/context/WmsContext";
+import { ItemMasterRecord, useWms } from "@/hooks/useWms";
+import { AuditDisplay, getAuditInfo } from "@/lib/AuditDisplay";
 import { Layers, Package, Tag } from "lucide-react";
 
-interface StockRecord {
-  id: string;
-  psc: string;
-  anNo: string;
-  barcode: string;
-  description: string;
-  brand: "BW" | "KLIK" | "OMG" | "ORO";
-  itemGroup: string;
-  color: string;
-  quantity: number;
-  isTestData?: boolean;
-}
-
 export default function StockInquiry() {
-  const { items } = useWms();
+  const { items, addItem, updateItem, deleteItem } = useWms();
 
-  // Map shared items to the StockRecord format used on this page
-  const stockData: StockRecord[] = items.map(item => ({
-    id: item.id,
-    psc: item.psc,
-    anNo: item.subId || "N/A", // Using subId as placeholder for AN #
-    barcode: item.barcode,
-    description: item.shortDescription,
-    brand: item.brand,
-    itemGroup: item.group,
-    color: item.color,
-    quantity: item.isTestData ? Math.floor(Math.random() * 5000) : 0, // Mock quantity for dev data
-    isTestData: item.isTestData
-  }));
-  const columns: ColumnDef<StockRecord>[] = [
+  const addFields: AddField<ItemMasterRecord>[] = [
+    { label: "PSC", name: "psc", type: "text", required: true },
+    { label: "Short Description", name: "shortDescription", type: "text", required: true },
+    { label: "Long Description", name: "longDescription", type: "textarea", required: true },
+    { label: "Invoice Description", name: "invoiceDescription", type: "text", required: true },
+    { label: "Picklist Code", name: "picklistCode", type: "text", required: true },
+    { label: "Barcode", name: "barcode", type: "text", required: true },
+    { label: "Product Type", name: "productType", type: "text", required: true },
+    { label: "IG Description", name: "igDescription", type: "text", required: true },
+    { label: "Sub ID", name: "subId", type: "text", required: true },
+    { label: "Brand", name: "brand", type: "select", options: [{ value: "BW", label: "BW" }, { value: "KLIK", label: "KLIK" }, { value: "OMG", label: "OMG" }, { value: "ORO", label: "ORO" }], required: true },
+    { label: "Group", name: "group", type: "text", required: true },
+    { label: "Category", name: "category", type: "text", required: true },
+    { label: "Sub Category", name: "subCategory", type: "text", required: true },
+    { label: "Size", name: "size", type: "text", required: true },
+    { label: "Color", name: "color", type: "text", required: true },
+    { label: "Is Saleable", name: "isSaleable", type: "checkbox", required: false },
+    { label: "Cost", name: "cost", type: "number", required: true },
+    { label: "SRP", name: "srp", type: "number", required: true },
+  ];
+  const columns: ColumnDef<ItemMasterRecord>[] = [
     {
       key: "psc",
       label: "PSC",
       className: "font-mono font-bold text-primary",
     },
     {
-      key: "anNo",
-      label: "AN #",
+      key: "subId",
+      label: "Sub ID",
       className: "font-mono",
     },
     {
@@ -60,12 +59,12 @@ export default function StockInquiry() {
       className: "font-mono text-muted-foreground",
     },
     {
-      key: "description",
+      key: "shortDescription",
       label: "Description",
       className: "font-medium",
       render: (row) => (
         <div className="flex items-center">
-          {row.description}
+          {row.shortDescription}
           {row.isTestData && <DevBadge />}
         </div>
       )
@@ -80,16 +79,16 @@ export default function StockInquiry() {
       ),
     },
     {
-      key: "itemGroup",
-      label: "Item Group",
+      key: "group",
+      label: "Group",
     },
     {
       key: "color",
       label: "Color",
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-full border border-muted" 
+          <div
+            className="w-3 h-3 rounded-full border border-muted"
             style={{ backgroundColor: row.color.toLowerCase() === 'multi' ? 'transparent' : row.color.toLowerCase() }}
           />
           {row.color}
@@ -97,10 +96,17 @@ export default function StockInquiry() {
       ),
     },
     {
-      key: "quantity",
-      label: "System Balance",
+      key: "cost",
+      label: "Cost",
       className: "font-bold",
-      render: (row) => row.quantity.toLocaleString(),
+      render: (row) => `₱${row.cost.toLocaleString()}`,
+    },
+    {
+      key: "auditInfo",
+      label: "Audit Info",
+      render: (row) => (
+        <AuditDisplay audit={getAuditInfo(row)} compact={true} />
+      )
     }
   ];
 
@@ -109,45 +115,66 @@ export default function StockInquiry() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Stock Inquiry</h1>
-          <p className="page-description">View real-time balances derived from transaction history</p>
+          <p className="page-description">Manage item master data and view stock information</p>
         </div>
-        <div className="flex items-center gap-2">
-           <Badge variant="secondary" className="px-3 py-1">READ-ONLY</Badge>
-        </div>
+        <AddModal<ItemMasterRecord>
+          title="Add New Item"
+          fields={addFields}
+          onSubmit={(data) => {
+            addItem({
+              ...data as ItemMasterRecord,
+              id: Date.now().toString(),
+            });
+          }}
+          triggerLabel="New Item"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           label="Total PSCs"
-          value={stockData.length}
+          value={items.length}
           icon={Package}
           variant="primary"
         />
         <StatCard
           label="Stocked Brands"
-          value={new Set(stockData.map(s => s.brand)).size}
+          value={new Set(items.map(s => s.brand)).size}
           icon={Tag}
           variant="info"
         />
         <StatCard
           label="Active Groups"
-          value={new Set(stockData.map(s => s.itemGroup)).size}
+          value={new Set(items.map(s => s.group)).size}
           icon={Layers}
           variant="success"
         />
       </div>
 
       <DataTable
-        data={stockData}
+        data={items}
         columns={columns}
-        searchPlaceholder="Search by PSC, AN #, Barcode, or Description..."
+        searchPlaceholder="Search by PSC, Sub ID, Barcode, or Description..."
         defaultPageSize={10}
-        emptyMessage="No stock records found."
+        emptyMessage="No items found."
+        actions={(row) => (
+          <ActionMenu>
+            <EditModal<ItemMasterRecord>
+              title="Edit Item"
+              data={row}
+              fields={addFields as any}
+              onSubmit={(data) => updateItem(row.id, data)}
+              triggerLabel="Edit"
+            />
+            <DeleteModal
+              title="Delete Item"
+              onSubmit={() => deleteItem(row.id)}
+              triggerLabel="Delete"
+            />
+          </ActionMenu>
+        )}
       />
 
-      <div className="p-4 bg-muted/30 border border-dashed rounded-lg text-xs text-muted-foreground italic text-center">
-        Note: Quantities are system-computed and cannot be manually adjusted on this page.
-      </div>
     </div>
   );
 }

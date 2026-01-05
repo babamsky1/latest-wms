@@ -6,6 +6,7 @@ import { Route, Routes } from "react-router-dom";
 import { DevTools } from "./components/dev/DevTools";
 import { MainLayout } from "./components/layout/MainLayout";
 import { WmsProvider } from "./context/WmsContext";
+import { AuthProvider, ProtectedRoute } from "./providers/AuthProvider";
 
 // Import page components
 import Dashboard from "./pages/Dashboard";
@@ -34,45 +35,131 @@ import { QueryProvider } from "./providers/QueryProvider";
 
 const App = () => (
   <QueryProvider>
-    <WmsProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {/* DevTools now sits inside the <BrowserRouter> provided by main.tsx */}
-        <DevTools />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
+    <AuthProvider>
+      <WmsProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
 
-          {/* Protected Routes with Layout */}
-          <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Protected Routes with Layout */}
+            <Route element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }>
+              <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Stock Management */}
-            <Route path="/stock-management/stock-buffering" element={<StockBuffering />} />
-            <Route path="/stock-management/stock-inquiry" element={<StockInquiry />} />
-            <Route path="/stock-management/stock-location-inquiry" element={<StockLocationInquiry />} />
-            <Route path="/stock-management/adjustments" element={<Adjustments />} />
-            <Route path="/stock-management/customer-returns" element={<CustomerReturns />} />
-            <Route path="/stock-management/withdrawal" element={<Withdrawal />} />
-            <Route path="/stock-management/transfers" element={<Transfers />} />
-            <Route path="/operations/monitoring" element={<OrderMonitoring />} />
-            <Route path="/order-completion/allocation" element={<AllocationSummary />} />
-            <Route path="/order-completion/picker" element={<PickerAssignment />} />
-            <Route path="/order-completion/barcoder" element={<BarcoderAssignment />} />
-            <Route path="/order-completion/tagger" element={<TaggerAssignment />} />
-            <Route path="/order-completion/checker" element={<CheckerAssignment />} />
-            <Route path="/order-completion/transfer" element={<TransferAssignment />} />
-            <Route path="/supplier/delivery" element={<SupplierDelivery />} />
-            <Route path="/supplier/profile" element={<SupplierProfile />} />
-            <Route path="/supplier/purchase-order" element={<PurchaseOrder />} />
-            <Route path="/reports/inventory" element={<InventoryReport />} />
-          </Route>
+              {/* Stock Management - Operator level and above */}
+              <Route path="/stock-management/stock-buffering" element={
+                <ProtectedRoute requiredRole="operator">
+                  <StockBuffering />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-management/stock-inquiry" element={
+                <ProtectedRoute requiredRole="viewer">
+                  <StockInquiry />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-management/stock-location-inquiry" element={
+                <ProtectedRoute requiredRole="operator">
+                  <StockLocationInquiry />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-management/adjustments" element={
+                <ProtectedRoute requiredRole="warehouse_manager">
+                  <Adjustments />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-management/customer-returns" element={
+                <ProtectedRoute requiredRole="operator">
+                  <CustomerReturns />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-management/withdrawal" element={
+                <ProtectedRoute requiredRole="operator">
+                  <Withdrawal />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-management/transfers" element={
+                <ProtectedRoute requiredRole="warehouse_manager">
+                  <Transfers />
+                </ProtectedRoute>
+              } />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </WmsProvider>
+              {/* Operations - Operator level and above */}
+              <Route path="/operations/monitoring" element={
+                <ProtectedRoute requiredRole="operator">
+                  <OrderMonitoring />
+                </ProtectedRoute>
+              } />
+
+              {/* Order Completion - Operator level and above */}
+              <Route path="/order-completion/allocation" element={
+                <ProtectedRoute requiredRole="operator">
+                  <AllocationSummary />
+                </ProtectedRoute>
+              } />
+              <Route path="/order-completion/picker" element={
+                <ProtectedRoute requiredRole="operator">
+                  <PickerAssignment />
+                </ProtectedRoute>
+              } />
+              <Route path="/order-completion/barcoder" element={
+                <ProtectedRoute requiredRole="operator">
+                  <BarcoderAssignment />
+                </ProtectedRoute>
+              } />
+              <Route path="/order-completion/tagger" element={
+                <ProtectedRoute requiredRole="operator">
+                  <TaggerAssignment />
+                </ProtectedRoute>
+              } />
+              <Route path="/order-completion/checker" element={
+                <ProtectedRoute requiredRole="operator">
+                  <CheckerAssignment />
+                </ProtectedRoute>
+              } />
+              <Route path="/order-completion/transfer" element={
+                <ProtectedRoute requiredRole="operator">
+                  <TransferAssignment />
+                </ProtectedRoute>
+              } />
+
+              {/* Supplier Management - Warehouse Manager and above */}
+              <Route path="/supplier/delivery" element={
+                <ProtectedRoute requiredRole="warehouse_manager">
+                  <SupplierDelivery />
+                </ProtectedRoute>
+              } />
+              <Route path="/supplier/profile" element={
+                <ProtectedRoute requiredRole="warehouse_manager">
+                  <SupplierProfile />
+                </ProtectedRoute>
+              } />
+              <Route path="/supplier/purchase-order" element={
+                <ProtectedRoute requiredRole="warehouse_manager">
+                  <PurchaseOrder />
+                </ProtectedRoute>
+              } />
+
+              {/* Reports - Viewer level and above */}
+              <Route path="/reports/inventory" element={
+                <ProtectedRoute requiredRole="viewer">
+                  <InventoryReport />
+                </ProtectedRoute>
+              } />
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          {/* DevTools inside WmsProvider but outside MainLayout */}
+          <DevTools />
+        </TooltipProvider>
+      </WmsProvider>
+    </AuthProvider>
   </QueryProvider>
 );
 

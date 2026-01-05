@@ -1,4 +1,8 @@
 import { StatCard } from "@/components/dashboard/StatCard";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useWms } from "@/hooks/useWms";
 import {
   Calendar,
   Download,
@@ -20,37 +25,31 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-interface ReportItem {
-  id: string;
-  sku: string;
-  name: string;
-  category: string;
-  openingStock: number;
-  stockIn: number;
-  stockOut: number;
-  adjustments: number;
-  closingStock: number;
-  value: number;
-}
-
-const reportData: ReportItem[] = [
-  { id: "1", sku: "WGT-A123", name: "Widget A-123", category: "Electronics", openingStock: 400, stockIn: 150, stockOut: 100, adjustments: 0, closingStock: 450, value: 4500.0 },
-  { id: "2", sku: "CMP-B456", name: "Component B-456", category: "Components", openingStock: 50, stockIn: 100, stockOut: 122, adjustments: 0, closingStock: 28, value: 560.0 },
-  { id: "3", sku: "RAW-C789", name: "Raw Material C-789", category: "Raw Materials", openingStock: 1000, stockIn: 500, stockOut: 300, adjustments: -50, closingStock: 1150, value: 11500.0 },
-  { id: "4", sku: "ELC-E345", name: "Electronic E-345", category: "Electronics", openingStock: 800, stockIn: 200, stockOut: 144, adjustments: 0, closingStock: 856, value: 8560.0 },
-  { id: "5", sku: "MCH-F678", name: "Machine Part F-678", category: "Machinery", openingStock: 200, stockIn: 50, stockOut: 16, adjustments: 0, closingStock: 234, value: 2340.0 },
-  { id: "6", sku: "PKG-H234", name: "Packaging H-234", category: "Packaging", openingStock: 1200, stockIn: 800, stockOut: 500, adjustments: 0, closingStock: 1500, value: 3000.0 },
-];
-
 const InventoryReport = () => {
+  const { items, deliveries, withdrawals, transfers, adjustments } = useWms();
   const [reportType, setReportType] = useState("stock-summary");
   const [period, setPeriod] = useState("this-month");
-  // const [searchQuery, setSearchQuery] = useState(""); // Managed by DataTable
 
-  // Filtered data logic works best if we pass valid data to DataTable and let it handle search.
-  // Unless we want custom filtering for reportType/period.
-  // reportData is static here, but presumably reportType/period would fetch new data.
-  // We will assume reportData is the "current" data.
+  // Generate report data from actual transactions
+  const reportData = items.map(item => {
+    // Calculate stock movements from various sources
+    const stockIn = deliveries.filter(d => d.itemCode === item.psc).reduce((sum, d) => sum + d.quantity, 0);
+    const stockOut = withdrawals.filter(w => w.psc === item.psc).reduce((sum, w) => sum + 1, 0); // Simplified
+    const adj = adjustments.filter(a => a.psc === item.psc).length; // Simplified
+
+    return {
+      id: item.id,
+      sku: item.psc,
+      name: item.shortDescription,
+      category: item.category,
+      openingStock: 0, // Would need historical data
+      stockIn,
+      stockOut,
+      adjustments: adj,
+      closingStock: Math.max(0, stockIn - stockOut + adj),
+      value: (stockIn - stockOut + adj) * item.cost,
+    };
+  });
 
   const totalValue = reportData.reduce((sum, item) => sum + item.value, 0);
   const totalItems = reportData.reduce((sum, item) => sum + item.closingStock, 0);
@@ -201,6 +200,16 @@ const InventoryReport = () => {
         data={reportData}
         columns={columns}
         searchPlaceholder="Search by SKU, name, or category..."
+        actions={(row) => (
+          <ActionMenu>
+            <Button size="sm" variant="ghost" className="text-blue-600">
+              View Details
+            </Button>
+            <Button size="sm" variant="ghost" className="text-green-600">
+              Export Item
+            </Button>
+          </ActionMenu>
+        )}
       />
     </div>
   );

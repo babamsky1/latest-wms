@@ -18,7 +18,7 @@ import { ReactNode, useEffect, useState } from "react";
 export interface AddField<T> {
   label: string;
   name: keyof T;
-  type?: "text" | "number" | "email" | "password" | "select" | "textarea" | "datalist";
+  type?: "text" | "number" | "email" | "password" | "date" | "select" | "textarea" | "datalist";
   placeholder?: string;
   disabled?: boolean;
   options?: { value: string; label: string }[];
@@ -98,6 +98,20 @@ const AddModal = <T extends object>({
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(String(value))) {
         return "Please enter a valid email";
+      }
+    }
+
+    if (field.type === "date" && value) {
+      const dateValue = String(value);
+      // Check if it's a valid date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dateValue)) {
+        return "Please enter a valid date (YYYY-MM-DD)";
+      }
+      // Check if it's a valid date
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        return "Please enter a valid date";
       }
     }
 
@@ -263,7 +277,7 @@ const AddModal = <T extends object>({
                 ) : (
                   <Input
                     id={String(field.name)}
-                    type={field.type || "text"}
+                    type={field.type === "date" ? "date" : field.type || "text"}
                     value={String(formData[field.name] ?? "")}
                     placeholder={field.placeholder}
                     disabled={field.disabled || isLoading}

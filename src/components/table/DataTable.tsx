@@ -111,9 +111,9 @@ export function DataTable<T>({
 
     // Sorting
     if (sortKey) {
-      rows.sort((a, b) => {
-        const aVal = String((a as any)[sortKey]);
-        const bVal = String((b as any)[sortKey]);
+      rows.sort((a: T, b: T) => {
+        const aVal = String(a[sortKey]);
+        const bVal = String(b[sortKey]);
         const comparison = aVal.localeCompare(bVal, undefined, {
           numeric: true,
           sensitivity: "base",

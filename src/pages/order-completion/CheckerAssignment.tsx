@@ -4,65 +4,12 @@ import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkflowButton, WorkflowTransition } from "@/components/workflow/WorkflowButton";
-import { CheckerRecord, useWms } from "@/context/WmsContext";
+import { DEFAULT_STAFF_COUNT, STAFF_MEMBERS } from "@/constants/assignment";
+import { CheckerRecord, useWms } from "@/hooks/useWms";
 import { CheckCircle2, ClipboardList, ShieldCheck, UserPlus } from "lucide-react";
-import { STAFF_MEMBERS, DEFAULT_STAFF_COUNT } from "@/constants";
 
 export default function CheckerAssignment() {
-  const { checkers: records, updateChecker, pickers, barcoders, taggers, items, addItem, deliveries } = useWms();
-
-  // Function to check if all assignments for a delivery are completed and create Stock Buffering record
-  const checkAndCreateStockBuffering = (poNo: string) => {
-    // Find all assignments for this PO
-    const poPickers = pickers.filter(p => p.poNo === poNo && p.status === "Picked");
-    const poBarcoders = barcoders.filter(b => b.poNo === poNo && b.status === "Scanned");
-    const poTaggers = taggers.filter(t => t.poNo === poNo && t.status === "Tagged");
-    const poCheckers = records.filter(c => c.poNo === poNo && c.status === "Checked");
-
-    // Check if we have assignments for all types
-    const hasPickers = poPickers.length > 0;
-    const hasBarcoders = poBarcoders.length > 0;
-    const hasTaggers = poTaggers.length > 0;
-    const hasCheckers = poCheckers.length > 0;
-
-    // If all assignment types exist and are completed, create Stock Buffering record
-    if (hasPickers && hasBarcoders && hasTaggers && hasCheckers) {
-      // Find the delivery record to get item details
-      const delivery = deliveries.find(d => d.referenceNo === poNo);
-      if (delivery) {
-        const item = items.find(i => i.psc === delivery.itemCode);
-        if (item) {
-          // Check if Stock Buffering record already exists
-          const existingStockBuffer = items.find(i => i.psc === delivery.itemCode);
-          if (!existingStockBuffer) {
-            // Create new Stock Buffering record
-            addItem({
-              id: `SB-${Date.now()}`,
-              psc: delivery.itemCode,
-              shortDescription: item.shortDescription,
-              longDescription: item.longDescription,
-              invoiceDescription: item.invoiceDescription,
-              picklistCode: item.picklistCode,
-              barcode: item.barcode,
-              productType: item.productType,
-              igDescription: item.igDescription,
-              subId: item.subId,
-              brand: item.brand,
-              group: item.group,
-              category: item.category,
-              subCategory: item.subCategory,
-              size: item.size,
-              color: item.color,
-              isSaleable: true,
-              cost: item.cost,
-              srp: item.srp,
-              isTestData: false
-            });
-          }
-        }
-      }
-    }
-  };
+  const { checkers: records, updateChecker } = useWms();
 
   const checkerTransitions: WorkflowTransition<CheckerRecord["status"]>[] = [
     { from: "Pending", to: "Checking", label: "Start Checking" },
@@ -94,23 +41,17 @@ export default function CheckerAssignment() {
       ),
     },
     {
-      key: "sourceReference",
-      label: "Source Ref",
-      className: "font-mono text-sm",
-      render: (row) => row.sourceReference,
-    },
-    {
       key: "status",
       label: "Status",
       render: (row) => {
         const effectiveStatus = row.assignedStaff ? row.status : "No Assignment";
-        const variants: Record<string, string> = {
-          "No Assignment": "status-muted",
-          Pending: "status-warning",
-          Checking: "status-pending",
-          Checked: "status-active",
+        const variants: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+          "No Assignment": "secondary",
+          "Pending": "warning",
+          "Checking": "default",
+          "Checked": "success",
         };
-        return <span className={`status-badge ${variants[effectiveStatus]}`}>{effectiveStatus}</span>;
+        return <Badge variant={variants[effectiveStatus] || "secondary"}>{effectiveStatus}</Badge>;
       },
     },
     {
@@ -221,8 +162,7 @@ export default function CheckerAssignment() {
               // When checking is completed, set countedQty to totalQty
               if (nextStatus === "Checked") {
                 updates.countedQty = row.totalQty;
-                // Check if all assignments for this delivery are completed
-                setTimeout(() => checkAndCreateStockBuffering(row.poNo), 100);
+                // Note: Downstream assignments are created by PickerAssignment.tsx
               }
               updateChecker(row.id, updates);
             }}

@@ -1,119 +1,96 @@
 import { StatCard } from "@/components/dashboard/StatCard";
-import EditModal from "@/components/modals/EditModal";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { WorkflowButton, WorkflowTransition } from "@/components/workflow/WorkflowButton";
-import { DEFAULT_STAFF_COUNT, STAFF_MEMBERS } from "@/constants";
-import { TransferAssignmentRecord, useWms } from "@/context/WmsContext";
-import { ArrowLeftRight, ClipboardList, Truck, UserPlus } from "lucide-react";
+import { useWms } from "@/hooks/useWms";
+import { TransferRecord } from "@/types";
+import { ArrowLeftRight, ClipboardList, Truck } from "lucide-react";
 
 export default function TransferAssignment() {
-  const { transferAssignments: records, updateTransferAssignment, transfers } = useWms();
+  const { transfers, updateTransfer, items } = useWms();
 
-  // Function to check and update transfer status based on assignments
-  const updateTransferStatus = (transferId: string) => {
-    const assignment = records.find(r => r.transferId === transferId);
-    if (assignment && assignment.status === "Delivered") {
-      // Find the original transfer and mark it as completed
-      const transfer = transfers.find(t => t.id === transferId);
-      if (transfer && transfer.status !== "Done") {
-        // Note: This would need to be implemented in the context
-        console.log(`Transfer ${transferId} completed via assignment`);
-      }
-    }
+  // Filter transfers that are approved and ready for assignment
+  const records = transfers.filter(t => t.status === "Approved" || t.status === "In Transit" || t.status === "Done");
+
+  // Get item details for each transfer
+  const getTransferDetails = (transfer: TransferRecord) => {
+    // Get the first item from the transfer's items array (primary product)
+    const primaryItem = transfer && transfer.items && transfer.items.length > 0 ? transfer.items[0] : null;
+    const item = primaryItem ? items.find(i => i.psc === primaryItem.psc) : null;
+    return { transfer, item };
   };
 
-  const transferTransitions: WorkflowTransition<TransferAssignmentRecord["status"]>[] = [
-    { from: "Assigned", to: "On Delivery", label: "Start Delivery" },
-    { from: "On Delivery", to: "Delivered", label: "Complete Delivery" },
+  const transferTransitions: WorkflowTransition<TransferRecord["status"]>[] = [
+    { from: "Approved", to: "In Transit", label: "Start Delivery" },
+    { from: "In Transit", to: "Done", label: "Complete Delivery" },
   ];
 
-  const columns: ColumnDef<TransferAssignmentRecord>[] = [
-    { key: "transferId", label: "Transfer ID", className: "font-mono font-bold" },
-    { key: "fromWarehouse", label: "From", className: "font-medium" },
-    { key: "toWarehouse", label: "To", className: "font-medium" },
-    { key: "driverName", label: "Driver" },
+  const columns: ColumnDef<TransferRecord>[] = [
+    { key: "referenceNo", label: "Transfer ID", className: "font-mono font-bold" },
+    {
+      key: "items",
+      label: "Product",
+      render: (row) => {
+        const { item } = getTransferDetails(row);
+        return item ? (
+          <div className="flex flex-col">
+            <span className="font-medium">{item.shortDescription}</span>
+            <span className="text-sm text-muted-foreground font-mono">{item.psc}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">Product not found</span>
+        );
+      },
+    },
+    { key: "sourceWarehouse", label: "From Warehouse", className: "font-medium" },
+    { key: "destinationWarehouse", label: "To Warehouse", className: "font-medium" },
+    {
+      key: "transferDate",
+      label: "Transfer Date",
+      render: (row) => new Date(row.transferDate).toLocaleDateString(),
+    },
+    { key: "requestedBy", label: "Requested By", className: "font-medium" },
     {
       key: "status",
       label: "Status",
       render: (row) => {
-        const effectiveStatus = row.assignedStaff ? row.status : "No Assignment";
-        const variants: Record<string, string> = {
-          "No Assignment": "status-muted",
-          Assigned: "status-warning",
-          "On Delivery": "status-pending",
-          Delivered: "status-active",
+        const variants: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+          "Approved": "warning",
+          "In Transit": "default",
+          "Done": "success",
         };
-        return <span className={`status-badge ${variants[effectiveStatus]}`}>{effectiveStatus}</span>;
+        return <Badge variant={variants[row.status] || "secondary"}>{row.status}</Badge>;
       },
-    },
-    {
-      key: "assignedStaff",
-      label: "Assigned Staff",
-      render: (row) => (
-        <EditModal
-          title="Assign Staff"
-          description="Select a staff member for this task"
-          data={row}
-          fields={[{ name: "assignedStaff", label: "Staff Member", type: "select", options: STAFF_MEMBERS }]}
-          onSubmit={(data) => updateTransferAssignment(row.id, { assignedStaff: data.assignedStaff })}
-          customTrigger={
-            <Button variant="ghost" className="w-full justify-between py-2 px-3 group hover:bg-slate-50 border border-transparent hover:border-slate-200">
-              {row.assignedStaff ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
-                    {row.assignedStaff.split(" ").map((n: string) => n[0]).join("")}
-                  </div>
-                  <span className="text-sm font-medium">{row.assignedStaff}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors">
-                  <UserPlus className="h-4 w-4" />
-                  <span className="text-sm italic">Assign Driver</span>
-                </div>
-              )}
-            </Button>
-          }
-        />
-      ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Transfer Assignment</h1>
-          <p className="page-description">Assign and manage inter-warehouse stock transfer tasks</p>
-        </div>
+      <div>
+        <h1 className="page-title">Transfer Assignment</h1>
+        <p className="page-description">Monitor and manage approved inter-warehouse stock transfers from the Transfers page.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Active Drivers" value={DEFAULT_STAFF_COUNT.DRIVERS.toString()} icon={Truck} variant="primary" />
-        <StatCard label="Pending Transfers" value={records.filter((r) => r.status === "Assigned").length} icon={ClipboardList} variant="warning" />
-        <StatCard label="Completed Today" value={records.filter((r) => r.status === "Delivered").length} icon={ArrowLeftRight} variant="success" />
+        <StatCard label="Approved Transfers" value={records.filter((r) => r.status === "Approved").length} icon={Truck} variant="primary" />
+        <StatCard label="In Transit" value={records.filter((r) => r.status === "In Transit").length} icon={ClipboardList} variant="warning" />
+        <StatCard label="Completed" value={records.filter((r) => r.status === "Done").length} icon={ArrowLeftRight} variant="success" />
       </div>
 
       <DataTable
         data={records}
         columns={columns}
         searchPlaceholder="Search transfers..."
-        actions={(row) => {
-          const currentStatus: TransferAssignmentRecord["status"] = row.assignedStaff ? row.status : "Assigned";
-          return (
-            <WorkflowButton
-              transitions={transferTransitions}
-              currentStatus={currentStatus}
-              isAssigned={!!row.assignedStaff}
-              onTransition={(nextStatus) => {
-                updateTransferAssignment(row.id, { status: nextStatus });
-                if (nextStatus === "Delivered") {
-                  updateTransferStatus(row.transferId);
-                }
-              }}
-            />
-          );
-        }}
+        actions={(row) => (
+          <WorkflowButton
+            transitions={transferTransitions}
+            currentStatus={row.status}
+            isAssigned={true}
+            onTransition={(nextStatus) => {
+              updateTransfer(row.id, { status: nextStatus });
+            }}
+          />
+        )}
       />
     </div>
   );

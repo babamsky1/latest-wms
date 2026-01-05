@@ -8,7 +8,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { ADMIN_USER } from "@/constants";
 import {
   Activity,
   ArrowLeftRight,
@@ -314,13 +313,13 @@ export const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
           <Avatar className="h-9 w-9 border-2 border-sidebar-primary/20">
             <AvatarImage src="" />
             <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground font-bold">
-              {ADMIN_USER.name.split(" ").map(n => n[0]).join("")}
+              AD
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-sidebar-accent-foreground truncate">{ADMIN_USER.name}</p>
-              <p className="text-[10px] text-sidebar-foreground/50 truncate font-medium">{ADMIN_USER.title}</p>
+              <p className="text-sm font-semibold text-sidebar-accent-foreground truncate">Admin User</p>
+              <p className="text-[10px] text-sidebar-foreground/50 truncate font-medium">Administrator</p>
             </div>
           )}
           {!isCollapsed && (

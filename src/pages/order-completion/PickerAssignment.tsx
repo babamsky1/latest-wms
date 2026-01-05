@@ -4,64 +4,123 @@ import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkflowButton, WorkflowTransition } from "@/components/workflow/WorkflowButton";
-import { DEFAULT_STAFF_COUNT, STAFF_MEMBERS } from "@/constants";
-import { PickerRecord, useWms } from "@/context/WmsContext";
+import { DEFAULT_STAFF_COUNT, STAFF_MEMBERS } from "@/constants/assignment";
+import { useWms } from "@/hooks/useWms";
+import { PickerRecord } from "@/types";
 import { CheckCircle2, ClipboardList, UserPlus, Users } from "lucide-react";
 
 export default function PickerAssignment() {
-  const { pickers: allPickers, updatePicker, barcoders, taggers, checkers, items, addItem, deliveries } = useWms();
+  const { pickers: allPickers, updatePicker, barcoders, taggers, checkers, items, addItem, deliveries, suppliers, addBarcoder, addTagger, addChecker, addTransferAssignment } = useWms();
 
-  // Function to check if all assignments for a delivery are completed and create Stock Buffering record
-  const checkAndCreateStockBuffering = (poNo: string) => {
-    // Find all assignments for this PO
-    const poPickers = allPickers.filter(p => p.poNo === poNo && p.status === "Picked");
-    const poBarcoders = barcoders.filter(b => b.poNo === poNo && b.status === "Scanned");
-    const poTaggers = taggers.filter(t => t.poNo === poNo && t.status === "Tagged");
-    const poCheckers = checkers.filter(c => c.poNo === poNo && c.status === "Checked");
+  // Function to create all downstream assignments when picker assignment completes
+  const createNextAssignment = (poNo: string) => {
+    // Find the delivery record to get item details
+    const delivery = deliveries.find(d => d.poNumber === poNo || d.referenceNo === poNo);
+    if (!delivery) return;
 
-    // Check if we have assignments for all types
-    const hasPickers = poPickers.length > 0;
-    const hasBarcoders = poBarcoders.length > 0;
-    const hasTaggers = poTaggers.length > 0;
-    const hasCheckers = poCheckers.length > 0;
+    const item = items.find(i => i.psc === delivery.itemCode);
+    const supplier = suppliers.find(s => s.supplierCode === delivery.supplierCode);
+    if (!item || !supplier) return;
 
-    // If all assignment types exist and are completed, create Stock Buffering record
-    if (hasPickers && hasBarcoders && hasTaggers && hasCheckers) {
-      // Find the delivery record to get item details
-      const delivery = deliveries.find(d => d.referenceNo === poNo);
-      if (delivery) {
-        const item = items.find(i => i.psc === delivery.itemCode);
-        if (item) {
-          // Check if Stock Buffering record already exists
-          const existingStockBuffer = items.find(i => i.psc === delivery.itemCode);
-          if (!existingStockBuffer) {
-            // Create new Stock Buffering record
-            addItem({
-              id: `SB-${Date.now()}`,
-              psc: delivery.itemCode,
-              shortDescription: item.shortDescription,
-              longDescription: item.longDescription,
-              invoiceDescription: item.invoiceDescription,
-              picklistCode: item.picklistCode,
-              barcode: item.barcode,
-              productType: item.productType,
-              igDescription: item.igDescription,
-              subId: item.subId,
-              brand: item.brand,
-              group: item.group,
-              category: item.category,
-              subCategory: item.subCategory,
-              size: item.size,
-              color: item.color,
-              isSaleable: true,
-              cost: item.cost,
-              srp: item.srp,
-              isTestData: false
-            });
-          }
-        }
+    // Create ALL assignments in sequence when picker is completed
+      // Create Barcoder Assignment
+      addBarcoder({
+        id: `B-${Date.now()}`,
+        seriesNo: `B-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+        poNo: delivery.poNumber || delivery.referenceNo,
+        deliveryReference: delivery.referenceNo,
+        poBrand: item.brand,
+        customerName: supplier.supplierName,
+        routeCode: "RT-01",
+        barcoderName: "Barcode Scanner",
+        deliverySchedule: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        dateApproved: new Date().toISOString().split('T')[0],
+        approvedTime: new Date().toTimeString().split(' ')[0],
+        priorityLevel: "Medium",
+        transferType: delivery.transferType,
+        approvedBy: "Admin",
+        receivedBy: "Warehouse Staff",
+        status: "Pending",
+        assignedStaff: undefined,
+        stockSource: "Supplier Delivery",
+        sourceReference: delivery.referenceNo,
+        totalQty: delivery.quantity,
+        countedQty: 0,
+      });
+
+      // Create Tagger Assignment
+      addTagger({
+        id: `T-${Date.now()}`,
+        seriesNo: `T-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+        poNo: delivery.poNumber || delivery.referenceNo,
+        deliveryReference: delivery.referenceNo,
+        poBrand: item.brand,
+        customerName: supplier.supplierName,
+        routeCode: "RT-01",
+        priorityLevel: "Medium",
+        deliverySchedule: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        dateApproved: new Date().toISOString().split('T')[0],
+        status: "Pending",
+        approvedBy: "Admin",
+        assignedStaff: undefined,
+        stockSource: "Supplier Delivery",
+        sourceReference: delivery.referenceNo,
+        totalQty: delivery.quantity,
+        countedQty: 0,
+      });
+
+      // Create Checker Assignment
+      addChecker({
+        id: `C-${Date.now()}`,
+        seriesNo: `CHK-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+        poNo: delivery.poNumber || delivery.referenceNo,
+        deliveryReference: delivery.referenceNo,
+        customerName: supplier.supplierName,
+        status: "Pending",
+        assignedStaff: undefined,
+        stockSource: "Supplier Delivery",
+        sourceReference: delivery.referenceNo,
+        totalQty: delivery.quantity,
+        countedQty: 0,
+      });
+
+      // Create Transfer Assignment
+      addTransferAssignment({
+        id: `TA-${Date.now()}`,
+        transferId: `TRF-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+        fromWarehouse: "Main Warehouse",
+        toWarehouse: "Retail Outlet",
+        driverName: "Robert Garcia",
+        assignedStaff: undefined,
+        status: "Assigned",
+      });
+
+      // Create Stock Buffering record (final step)
+      const existingStockBuffer = items.find(i => i.psc === delivery.itemCode);
+      if (!existingStockBuffer) {
+        addItem({
+          id: `SB-${Date.now()}`,
+          psc: delivery.itemCode,
+          shortDescription: item.shortDescription,
+          longDescription: item.longDescription,
+          invoiceDescription: item.invoiceDescription,
+          picklistCode: item.picklistCode,
+          barcode: item.barcode,
+          productType: item.productType,
+          igDescription: item.igDescription,
+          subId: item.subId,
+          brand: item.brand,
+          group: item.group,
+          category: item.category,
+          subCategory: item.subCategory,
+          size: item.size,
+          color: item.color,
+          isSaleable: true,
+          cost: item.cost,
+          srp: item.srp,
+          isTestData: false
+        });
       }
-    }
   };
 
   // Map pickers to include dynamic status: No Assignment if no staff
@@ -98,12 +157,6 @@ export default function PickerAssignment() {
       ),
     },
     {
-      key: "sourceReference",
-      label: "Source Ref",
-      className: "font-mono text-sm",
-      render: (row) => row.sourceReference,
-    },
-    {
       key: "priorityLevel",
       label: "Priority",
       render: (row) => {
@@ -134,14 +187,15 @@ export default function PickerAssignment() {
     {
       key: "status",
       label: "Status",
+      className: "text-center",
       render: (row) => {
-        const variants: Record<string, string> = {
-          "No Assignment": "status-muted",
-          Assigned: "status-warning",
-          Picking: "status-pending",
-          Picked: "status-active",
+        const variants: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+          "No Assignment": "secondary",
+          "Assigned": "warning",
+          "Picking": "default",
+          "Picked": "success",
         };
-        return <span className={`status-badge ${variants[row.status]}`}>{row.status}</span>;
+        return <Badge variant={variants[row.status] || "secondary"}>{row.status}</Badge>;
       },
     },
     {
@@ -257,8 +311,8 @@ export default function PickerAssignment() {
               // When picking is completed, set countedQty to totalQty
               if (nextStatus === "Picked") {
                 updates.countedQty = row.totalQty;
-                // Check if all assignments for this delivery are completed
-                setTimeout(() => checkAndCreateStockBuffering(row.poNo), 100);
+                // Create all downstream assignments in sequence
+                setTimeout(() => createNextAssignment(row.poNo), 100);
               }
               updatePicker(row.id, updates);
             }}

@@ -2,21 +2,43 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, ChevronDown } from "lucide-react";
-import { ADMIN_USER } from "@/constants";
+import { Bell, ChevronDown, LogOut, User } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface TopBarProps {
   title?: string;
 }
 
 export const TopBar = ({ title }: TopBarProps) => {
+  const { user, logout } = useAuth();
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getRoleDisplay = (role: string) => {
+    const roleMap: Record<string, string> = {
+      admin: 'Administrator',
+      warehouse_manager: 'Warehouse Manager',
+      operator: 'Operator',
+      viewer: 'Viewer',
+      accountant: 'Accountant'
+    };
+    return roleMap[role] || role;
+  };
+
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6">
       <div className="flex items-center gap-4 flex-1">
@@ -65,23 +87,41 @@ export const TopBar = ({ title }: TopBarProps) => {
             <Button variant="ghost" className="flex items-center gap-2 pl-2 pr-3">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  {ADMIN_USER.name.split(" ").map(n => n[0]).join("")}
+                  {user ? getInitials(user.fullName) : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start text-sm">
-                <span className="font-medium">{ADMIN_USER.name}</span>
-                <span className="text-xs text-muted-foreground">{ADMIN_USER.title}</span>
+                <span className="font-medium">{user?.fullName || 'User'}</span>
+                <span className="text-xs text-muted-foreground">
+                  {user ? getRoleDisplay(user.role) : 'Loading...'}
+                </span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{user?.fullName}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Log out</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive cursor-pointer focus:text-destructive"
+              onClick={logout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -8,9 +8,14 @@
 
 import { StatCard } from "@/components/dashboard/StatCard";
 import { DevBadge } from "@/components/dev/DevTools";
+import AddModal, { AddField } from "@/components/modals/AddModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditModal from "@/components/modals/EditModal";
+import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { OrderMonitorRecord, useWms } from "@/context/WmsContext";
+import { Button } from "@/components/ui/button";
+import { OrderMonitorRecord, useWms } from "@/hooks/useWms";
 import { Activity, CheckCircle2, Clock } from "lucide-react";
 
 const statusColor = (status: string) => {
@@ -22,7 +27,15 @@ const statusColor = (status: string) => {
 };
 
 export default function OrderMonitoring() {
-  const { orders: monitorData } = useWms();
+  const { orders: monitorData, addOrder, updateOrder, deleteOrder, customers } = useWms();
+
+  const addFields: AddField<OrderMonitorRecord>[] = [
+    { label: "PO Number", name: "poNo", type: "text", required: true },
+    { label: "Series Number", name: "seriesNo", type: "text", required: true },
+    { label: "Customer", name: "customerName", type: "select", options: customers.map(c => ({ value: c.name, label: c.name })), required: true },
+    { label: "Brand", name: "brand", type: "select", options: [{ value: "BW", label: "BW" }, { value: "KLIK", label: "KLIK" }, { value: "OMG", label: "OMG" }, { value: "ORO", label: "ORO" }], required: true },
+    { label: "Delivery Schedule", name: "deliverySchedule", type: "date", required: true },
+  ];
   const columns: ColumnDef<OrderMonitorRecord>[] = [
     { 
       key: "poNo", 
@@ -80,9 +93,25 @@ export default function OrderMonitoring() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Order Monitoring</h1>
-          <p className="page-description">Real-time status tracking across the warehouse workflow</p>
+          <p className="page-description">Manage and track order status across the warehouse workflow</p>
         </div>
-        <Badge variant="secondary">READ-ONLY</Badge>
+        <AddModal<OrderMonitorRecord>
+          title="Add New Order"
+          fields={addFields}
+          onSubmit={(data) => {
+            addOrder({
+              ...data as OrderMonitorRecord,
+              id: Date.now().toString(),
+              pickerStatus: "Pending",
+              barcoderStatus: "Pending",
+              taggerStatus: "Pending",
+              checkerStatus: "Pending",
+              overallStatus: "Processing",
+              updatedAt: new Date().toLocaleString(),
+            });
+          }}
+          triggerLabel="New Order"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -111,6 +140,42 @@ export default function OrderMonitoring() {
         columns={columns}
         searchPlaceholder="Search by PO #, Series #, or Customer..."
         defaultPageSize={10}
+        actions={(row) => (
+          <ActionMenu>
+            <EditModal<OrderMonitorRecord>
+              title="Edit Order"
+              data={row}
+              fields={addFields as any}
+              onSubmit={(data) => updateOrder(row.id, { ...data, updatedAt: new Date().toLocaleString() })}
+              triggerLabel="Edit"
+            />
+            <DeleteModal
+              title="Delete Order"
+              onSubmit={() => deleteOrder(row.id)}
+              triggerLabel="Delete"
+            />
+            {row.pickerStatus === "Pending" && (
+              <Button size="sm" variant="ghost" className="text-blue-600" onClick={() => updateOrder(row.id, { pickerStatus: "In Progress", updatedAt: new Date().toLocaleString() })}>
+                Start Picker
+              </Button>
+            )}
+            {row.barcoderStatus === "Pending" && (
+              <Button size="sm" variant="ghost" className="text-green-600" onClick={() => updateOrder(row.id, { barcoderStatus: "In Progress", updatedAt: new Date().toLocaleString() })}>
+                Start Barcoder
+              </Button>
+            )}
+            {row.taggerStatus === "Pending" && (
+              <Button size="sm" variant="ghost" className="text-purple-600" onClick={() => updateOrder(row.id, { taggerStatus: "In Progress", updatedAt: new Date().toLocaleString() })}>
+                Start Tagger
+              </Button>
+            )}
+            {row.checkerStatus === "Pending" && (
+              <Button size="sm" variant="ghost" className="text-orange-600" onClick={() => updateOrder(row.id, { checkerStatus: "In Progress", updatedAt: new Date().toLocaleString() })}>
+                Start Checker
+              </Button>
+            )}
+          </ActionMenu>
+        )}
       />
     </div>
   );

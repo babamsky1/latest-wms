@@ -15,7 +15,7 @@ import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AdjustmentRecord, useWms } from "@/context/WmsContext";
+import { AdjustmentRecord, useWms } from "@/hooks/useWms";
 import { CheckCircle2, Clock, Scale } from "lucide-react";
 
 export default function Adjustments() {
@@ -28,7 +28,7 @@ export default function Adjustments() {
     { label: "PSC (Item)", name: "psc", type: "datalist", options: items.map(i => ({ value: i.psc, label: `${i.psc} - ${i.shortDescription}` })), required: true },
     { label: "Category", name: "category", type: "select", options: categories.map(c => ({ value: c, label: c })), required: true },
     { label: "Warehouse", name: "warehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
-    { label: "Adjustment Date", name: "adjustmentDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Adjustment Date", name: "adjustmentDate", type: "date", required: true },
   ];
 
   const columns: ColumnDef<AdjustmentRecord>[] = [

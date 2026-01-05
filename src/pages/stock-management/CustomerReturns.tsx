@@ -8,7 +8,7 @@ import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CustomerReturnRecord, useWms } from "@/context/WmsContext";
+import { CustomerReturnRecord, useWms } from "@/hooks/useWms";
 import { AlertCircle, Archive, CheckCircle2 } from "lucide-react";
 
 export default function CustomerReturns() {
@@ -128,37 +128,32 @@ export default function CustomerReturns() {
                 data={customerReturns}
                 columns={columns}
                 searchPlaceholder="Search returns..."
-                actions={(row) => {
-                    const isLocked = row.status === "Done";
-                    if (isLocked) return <Badge variant="secondary">LOCKED</Badge>;
-
-                    return (
-                        <ActionMenu>
-                            <EditModal<CustomerReturnRecord>
-                                title="Edit Return"
-                                data={row}
-                                fields={addFields as any}
-                                onSubmit={(data) => handleUpdate(row.id, data)}
-                                triggerLabel="Edit"
-                            />
-                            <DeleteModal
-                                title="Delete Return"
-                                onSubmit={() => handleDelete(row.id)}
-                                triggerLabel="Delete"
-                            />
-                            {row.status === "Open" && (
-                                <Button size="sm" variant="ghost" className="text-warning" onClick={() => handleUpdate(row.id, { status: "For Segregation" })}>
-                                    Mark For Segregation
-                                </Button>
-                            )}
-                            {row.status === "For Segregation" && (
-                                <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Done" })}>
-                                    Mark as Done
-                                </Button>
-                            )}
-                        </ActionMenu>
-                    );
-                }}
+                actions={(row) => (
+                    <ActionMenu>
+                        <EditModal<CustomerReturnRecord>
+                            title="Edit Return"
+                            data={row}
+                            fields={addFields as any}
+                            onSubmit={(data) => handleUpdate(row.id, data)}
+                            triggerLabel="Edit"
+                        />
+                        <DeleteModal
+                            title="Delete Return"
+                            onSubmit={() => handleDelete(row.id)}
+                            triggerLabel="Delete"
+                        />
+                        {row.status === "Open" && (
+                            <Button size="sm" variant="ghost" className="text-warning" onClick={() => handleUpdate(row.id, { status: "For Segregation" })}>
+                                Mark For Segregation
+                            </Button>
+                        )}
+                        {row.status === "For Segregation" && (
+                            <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Done" })}>
+                                Mark as Done
+                            </Button>
+                        )}
+                    </ActionMenu>
+                )}
             />
         </div>
     );

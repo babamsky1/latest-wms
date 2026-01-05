@@ -14,7 +14,7 @@ import EditModal, { EditField } from "@/components/modals/EditModal";
 import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { SupplierRecord, useWms } from "@/context/WmsContext";
+import { SupplierRecord, useWms } from "@/hooks/useWms";
 import { Globe, ShieldCheck, Truck } from "lucide-react";
 
 export default function SupplierProfile() {

@@ -15,7 +15,7 @@ import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useWms, WithdrawalRecord } from "@/context/WmsContext";
+import { useWms, WithdrawalRecord } from "@/hooks/useWms";
 import { ArrowUpCircle, CheckCircle2, Clock } from "lucide-react";
 
 export default function Withdrawal() {
@@ -25,7 +25,7 @@ export default function Withdrawal() {
     { label: "PSC (Item)", name: "psc", type: "datalist", options: items.map(i => ({ value: i.psc, label: `${i.psc} - i.shortDescription` })), required: true },
     { label: "Category", name: "category", type: "select", options: [{ value: "Acetone", label: "Acetone" }, { value: "Industrial", label: "Industrial" }], required: true },
     { label: "Warehouse", name: "warehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
-    { label: "Transfer Date", name: "transferDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Transfer Date", name: "transferDate", type: "date", required: true },
   ];
 
   const columns: ColumnDef<WithdrawalRecord>[] = [
@@ -101,30 +101,32 @@ export default function Withdrawal() {
         data={records}
         columns={columns}
         searchPlaceholder="Search withdrawals..."
-        actions={(row) => {
-          const isLocked = row.status === "Pending" || row.status === "Done";
-          if (isLocked) return <Badge variant="secondary">STATUS LOCKED</Badge>;
-
-          return (
-            <ActionMenu>
-              <EditModal<WithdrawalRecord>
-                title="Edit Withdrawal"
-                data={row}
-                fields={addFields as any}
-                onSubmit={(data) => updateWithdrawal(row.id, data)}
-                triggerLabel="Edit"
-              />
-              <DeleteModal
-                title="Delete Withdrawal"
-                onSubmit={() => deleteWithdrawal(row.id)}
-                triggerLabel="Delete"
-              />
+        actions={(row) => (
+          <ActionMenu>
+            <EditModal<WithdrawalRecord>
+              title="Edit Withdrawal"
+              data={row}
+              fields={addFields as any}
+              onSubmit={(data) => updateWithdrawal(row.id, data)}
+              triggerLabel="Edit"
+            />
+            <DeleteModal
+              title="Delete Withdrawal"
+              onSubmit={() => deleteWithdrawal(row.id)}
+              triggerLabel="Delete"
+            />
+            {row.status === "Open" && (
               <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
                 Post
               </Button>
-            </ActionMenu>
-          );
-        }}
+            )}
+            {row.status === "Pending" && (
+              <Button size="sm" variant="ghost" className="text-info" onClick={() => handleUpdate(row.id, { status: "Done" })}>
+                Complete
+              </Button>
+            )}
+          </ActionMenu>
+        )}
       />
     </div>
   );

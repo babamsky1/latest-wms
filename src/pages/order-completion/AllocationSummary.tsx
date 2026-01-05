@@ -10,8 +10,8 @@
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { useWms } from "@/hooks/useWms";
 import { AlertCircle, CheckCircle2, ClipboardList } from "lucide-react";
-import { useWms } from "@/context/WmsContext";
 import { useMemo } from "react";
 
 interface AllocationRecord {
@@ -30,7 +30,8 @@ interface AllocationRecord {
 }
 
 export default function AllocationSummary() {
-  const { pickers, barcoders, taggers, checkers } = useWms();
+  const { pickers, barcoders, taggers, checkers, customers, transferAssignments, transfers } = useWms();
+
 
   // Calculate allocation data from assignment records
   const allocationData: AllocationRecord[] = useMemo(() => {
@@ -96,7 +97,6 @@ export default function AllocationSummary() {
   const columns: ColumnDef<AllocationRecord>[] = [
     { key: "poNo", label: "PO #", className: "font-mono font-bold" },
     { key: "seriesNo", label: "Series #", className: "font-mono" },
-    { key: "brand", label: "Brand" },
     { key: "customerName", label: "Customer Name", className: "font-medium" },
     {
       key: "stockSource",
@@ -112,30 +112,23 @@ export default function AllocationSummary() {
       ),
     },
     {
-      key: "sourceReference",
-      label: "Source Ref",
-      className: "font-mono text-sm",
-      render: (row) => row.sourceReference,
-    },
-    {
-      key: "allocatedQty",
-      label: "Allocated",
-      render: (row) => row.allocatedQty.toLocaleString()
-    },
-    {
-      key: "progress",
-      label: "Progress",
+      key: "pickedQty",
+      label: "Picker Progress",
       className: "font-bold",
       render: (row) => {
-        const progressPercent = row.allocatedQty > 0 ? (row.pickedQty / row.allocatedQty) * 100 : 0;
-        const isComplete = row.remainingQty === 0;
-        const hasProgress = row.pickedQty > 0;
+        const pickers = allocationData.filter(a => a.poNo === row.poNo && a.seriesNo === row.seriesNo);
+        const picker = pickers[0]; // Assuming one picker per allocation
+        if (!picker) return <span className="text-muted-foreground">No data</span>;
+
+        const progressPercent = picker.allocatedQty > 0 ? (picker.pickedQty / picker.allocatedQty) * 100 : 0;
+        const isComplete = picker.pickedQty === picker.allocatedQty;
+        const hasProgress = picker.pickedQty > 0;
 
         return (
-          <div className="flex flex-col space-y-1 min-w-[120px]">
+          <div className="flex flex-col space-y-1 min-w-[100px]">
             <div className="flex justify-between text-xs">
-              <span className="text-success font-medium">{row.pickedQty.toLocaleString()}</span>
-              <span className="text-destructive font-medium">{row.remainingQty.toLocaleString()}</span>
+              <span className="text-primary font-medium">{picker.pickedQty.toLocaleString()}</span>
+              <span className="text-muted-foreground">{picker.allocatedQty.toLocaleString()}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
@@ -151,7 +144,7 @@ export default function AllocationSummary() {
                 isComplete ? 'text-success' :
                 hasProgress ? 'text-warning' : 'text-muted-foreground'
               }`}>
-                {progressPercent.toFixed(0)}% Complete
+                {progressPercent.toFixed(0)}%
               </span>
             </div>
           </div>
@@ -159,16 +152,166 @@ export default function AllocationSummary() {
       },
     },
     {
-      key: "status",
-      label: "Status",
+      key: "remainingQty",
+      label: "Barcode Progress",
+      className: "font-bold",
       render: (row) => {
-        const variants: Record<string, string> = {
-          "Fully Picked": "status-active",
-          "Partially Picked": "status-pending",
-          "Pending": "status-warning"
-        };
-        return <span className={`status-badge ${variants[row.status]}`}>{row.status}</span>;
-      }
+        // Get barcoders for this PO
+        const poBarcoders = barcoders.filter(b => b.poNo === row.poNo);
+        const totalBarcoded = poBarcoders.reduce((sum, b) => sum + b.countedQty, 0);
+        const totalRequired = poBarcoders.reduce((sum, b) => sum + b.totalQty, 0);
+        const progressPercent = totalRequired > 0 ? (totalBarcoded / totalRequired) * 100 : 0;
+        const isComplete = totalBarcoded === totalRequired && totalRequired > 0;
+        const hasProgress = totalBarcoded > 0;
+
+        return (
+          <div className="flex flex-col space-y-1 min-w-[100px]">
+            <div className="flex justify-between text-xs">
+              <span className="text-primary font-medium">{totalBarcoded.toLocaleString()}</span>
+              <span className="text-muted-foreground">{totalRequired.toLocaleString()}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  isComplete ? 'bg-success' :
+                  hasProgress ? 'bg-warning' : 'bg-muted'
+                }`}
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+              />
+            </div>
+            <div className="text-center">
+              <span className={`text-xs font-medium ${
+                isComplete ? 'text-success' :
+                hasProgress ? 'text-warning' : 'text-muted-foreground'
+              }`}>
+                {progressPercent.toFixed(0)}%
+              </span>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "customerName",
+      label: "Tagger Progress",
+      className: "font-bold",
+      render: (row) => {
+        // Get taggers for this PO
+        const poTaggers = taggers.filter(t => t.poNo === row.poNo);
+        const totalTagged = poTaggers.reduce((sum, t) => sum + t.countedQty, 0);
+        const totalRequired = poTaggers.reduce((sum, t) => sum + t.totalQty, 0);
+        const progressPercent = totalRequired > 0 ? (totalTagged / totalRequired) * 100 : 0;
+        const isComplete = totalTagged === totalRequired && totalRequired > 0;
+        const hasProgress = totalTagged > 0;
+
+        return (
+          <div className="flex flex-col space-y-1 min-w-[100px]">
+            <div className="flex justify-between text-xs">
+              <span className="text-primary font-medium">{totalTagged.toLocaleString()}</span>
+              <span className="text-muted-foreground">{totalRequired.toLocaleString()}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  isComplete ? 'bg-success' :
+                  hasProgress ? 'bg-warning' : 'bg-muted'
+                }`}
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+              />
+            </div>
+            <div className="text-center">
+              <span className={`text-xs font-medium ${
+                isComplete ? 'text-success' :
+                hasProgress ? 'text-warning' : 'text-muted-foreground'
+              }`}>
+                {progressPercent.toFixed(0)}%
+              </span>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "stockSource",
+      label: "Checker Progress",
+      className: "font-bold",
+      render: (row) => {
+        // Get checkers for this PO
+        const poCheckers = checkers.filter(c => c.poNo === row.poNo);
+        const totalChecked = poCheckers.reduce((sum, c) => sum + c.countedQty, 0);
+        const totalRequired = poCheckers.reduce((sum, c) => sum + c.totalQty, 0);
+        const progressPercent = totalRequired > 0 ? (totalChecked / totalRequired) * 100 : 0;
+        const isComplete = totalChecked === totalRequired && totalRequired > 0;
+        const hasProgress = totalChecked > 0;
+
+        return (
+          <div className="flex flex-col space-y-1 min-w-[100px]">
+            <div className="flex justify-between text-xs">
+              <span className="text-primary font-medium">{totalChecked.toLocaleString()}</span>
+              <span className="text-muted-foreground">{totalRequired.toLocaleString()}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  isComplete ? 'bg-success' :
+                  hasProgress ? 'bg-warning' : 'bg-muted'
+                }`}
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+              />
+            </div>
+            <div className="text-center">
+              <span className={`text-xs font-medium ${
+                isComplete ? 'text-success' :
+                hasProgress ? 'text-warning' : 'text-muted-foreground'
+              }`}>
+                {progressPercent.toFixed(0)}%
+              </span>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "updatedAt",
+      label: "Transfer Progress",
+      className: "font-bold",
+      render: (row) => {
+        // Get transfers for this PO (through transfer assignments)
+        const poTransfers = transferAssignments.filter(ta =>
+          transfers.some(t => t.id === ta.transferId && t.referenceNo.includes(row.poNo))
+        );
+        const completedTransfers = poTransfers.filter(ta => ta.status === "Delivered").length;
+        const totalTransfers = poTransfers.length;
+        const progressPercent = totalTransfers > 0 ? (completedTransfers / totalTransfers) * 100 : 0;
+        const isComplete = completedTransfers === totalTransfers && totalTransfers > 0;
+        const hasProgress = completedTransfers > 0;
+
+        return (
+          <div className="flex flex-col space-y-1 min-w-[100px]">
+            <div className="flex justify-between text-xs">
+              <span className="text-primary font-medium">{completedTransfers}</span>
+              <span className="text-muted-foreground">{totalTransfers}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  isComplete ? 'bg-success' :
+                  hasProgress ? 'bg-warning' : 'bg-muted'
+                }`}
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+              />
+            </div>
+            <div className="text-center">
+              <span className={`text-xs font-medium ${
+                isComplete ? 'text-success' :
+                hasProgress ? 'text-warning' : 'text-muted-foreground'
+              }`}>
+                {progressPercent.toFixed(0)}%
+              </span>
+            </div>
+          </div>
+        );
+      },
     },
     { key: "updatedAt", label: "Last Updated", className: "text-muted-foreground text-sm" }
   ];
@@ -180,7 +323,6 @@ export default function AllocationSummary() {
           <h1 className="page-title">Allocation Summary</h1>
           <p className="page-description">Real-time allocation status derived from picker, barcoder, tagger, and checker assignments across all stock sources</p>
         </div>
-        <Badge variant="secondary">READ-ONLY</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

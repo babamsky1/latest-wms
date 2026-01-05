@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useWms } from "@/context/WmsContext";
+import { useWms } from "@/hooks/useWms";
 import { Beaker, ShieldAlert } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";

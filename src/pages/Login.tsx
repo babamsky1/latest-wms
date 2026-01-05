@@ -1,24 +1,35 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Boxes, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/providers/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { login, isLoading } = useAuth();
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate("/dashboard");
-    }, 1000);
+
+    try {
+      await login(email, password);
+      toast({
+        title: "Login successful",
+        description: "Welcome to WMS Pro!",
+      });
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Invalid credentials",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -90,6 +101,8 @@ const Login = () => {
                   type="email"
                   placeholder="name@company.com"
                   className="pl-10"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -113,6 +126,8 @@ const Login = () => {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   className="pl-10 pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
                 <Button
@@ -141,6 +156,13 @@ const Login = () => {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
+
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              <p>Demo accounts:</p>
+              <p>Admin: admin@wms.com / password</p>
+              <p>Manager: manager@wms.com / password</p>
+              <p>Operator: operator@wms.com / password</p>
+            </div>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-8">

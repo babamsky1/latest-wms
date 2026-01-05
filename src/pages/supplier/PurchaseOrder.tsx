@@ -10,13 +10,15 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { DevBadge } from "@/components/dev/DevTools";
 import AddModal, { AddField } from "@/components/modals/AddModal";
 import DeleteModal from "@/components/modals/DeleteModal";
-import EditModal from "@/components/modals/EditModal";
+import EditModal, { EditField } from "@/components/modals/EditModal";
 import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PurchaseOrderRecord, useWms } from "@/context/WmsContext";
+import { useWms } from "@/hooks/useWms";
 import { cn } from "@/lib/utils";
+import { PurchaseOrderRecord } from "@/types";
+import { AuditDisplay, getAuditInfo } from "@/lib/AuditDisplay";
 import { CheckCircle2, Clock, ShoppingCart } from "lucide-react";
 
 export default function PurchaseOrder() {
@@ -29,7 +31,17 @@ export default function PurchaseOrder() {
     { label: "Unit Price", name: "unitPrice", type: "number", required: true },
     { label: "Total Amount", name: "totalAmount", type: "number", required: true },
     { label: "Priority", name: "priority", type: "select", options: [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }], required: true },
-    { label: "Expected Delivery", name: "expectedDate", type: "text", placeholder: "YYYY-MM-DD", required: true },
+    { label: "Expected Delivery", name: "expectedDate", type: "date", required: true },
+  ];
+
+  const editFields: EditField<PurchaseOrderRecord>[] = [
+    { label: "Supplier", name: "supplierName", type: "select", options: suppliers.map(s => ({ value: s.supplierName, label: s.supplierName })), required: true },
+    { label: "Item", name: "itemCode", type: "select", options: items.map(i => ({ value: i.psc, label: `${i.psc} - ${i.shortDescription}` })), required: true },
+    { label: "Quantity", name: "quantity", type: "number", required: true },
+    { label: "Unit Price", name: "unitPrice", type: "number", required: true },
+    { label: "Total Amount", name: "totalAmount", type: "number", required: true },
+    { label: "Priority", name: "priority", type: "select", options: [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }], required: true },
+    { label: "Expected Delivery", name: "expectedDate", type: "date", required: true },
   ];
 
   const columns: ColumnDef<PurchaseOrderRecord>[] = [
@@ -49,12 +61,12 @@ export default function PurchaseOrder() {
     { key: "quantity", label: "Qty", className: "font-bold text-right" },
     { key: "orderDate", label: "Order Date" },
     { key: "expectedDate", label: "Expected Date" },
-    { key: "createdAt", label: "Created", className: "text-sm text-muted-foreground" },
     {
-      key: "approvedAt",
-      label: "Approved",
-      className: "text-sm text-muted-foreground",
-      render: (row) => row.status === "Approved" || row.status === "Received" ? row.approvedAt || "N/A" : "Pending"
+      key: "auditInfo",
+      label: "Audit Info",
+      render: (row) => (
+        <AuditDisplay audit={getAuditInfo(row)} compact={true} />
+      )
     },
     {
       key: "totalAmount",
@@ -77,14 +89,15 @@ export default function PurchaseOrder() {
     {
       key: "status",
       label: "Status",
+      className: "text-center",
       render: (row) => {
-        const variants: Record<string, string> = {
-          "Draft": "status-pending",
-          "Pending": "status-warning",
-          "Approved": "status-active",
-          "Received": "status-success"
+        const variants: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+          "Draft": "secondary",
+          "Pending": "warning",
+          "Approved": "success",
+          "Received": "default"
         };
-        return <span className={cn("status-badge", variants[row.status])}>{row.status}</span>;
+        return <Badge variant={variants[row.status] || "secondary"}>{row.status}</Badge>;
       }
     },
     { key: "updatedAt", label: "Updated At", className: "hidden xl:table-cell text-sm text-muted-foreground" }
@@ -117,10 +130,10 @@ export default function PurchaseOrder() {
         supplierCode: supplier.supplierCode,
         itemCode: po.itemCode,
         quantity: po.quantity,
-        packingNo: "",
-        containerNo: "",
+        packingNo: `PK-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+        containerNo: `CONT-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
         transferType: "Local" as const,
-        status: "Pending" as const,
+        status: "Open" as const,
         warehouse: "Main Warehouse",
         createdBy: "admin",
         createdAt: new Date().toLocaleString(),
@@ -171,11 +184,31 @@ export default function PurchaseOrder() {
         columns={columns}
         searchPlaceholder="Search by PO #, supplier..."
         actions={(row) => (
-          <ActionMenu>
+          <ActionMenu closeOnAction={["Approve PO"]}>
+            {row.status === "Draft" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-warning border-warning hover:bg-warning/10 w-full"
+                onClick={() => handleUpdate(row.id, { status: "Pending" })}
+              >
+                Submit for Approval
+              </Button>
+            )}
+            {row.status === "Pending" && (
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-success hover:bg-success/90 text-success-foreground w-full"
+                onClick={() => handleApprove(row.id)}
+              >
+                Approve PO
+              </Button>
+            )}
             <EditModal<PurchaseOrderRecord>
               title="Edit Purchase Order"
               data={row}
-              fields={addFields as any}
+              fields={editFields}
               onSubmit={(data) => updatePO(row.id, data)}
               triggerLabel="Edit"
             />
@@ -184,21 +217,6 @@ export default function PurchaseOrder() {
               onSubmit={() => deletePO(row.id)}
               triggerLabel="Delete"
             />
-            {row.status === "Draft" && (
-              <Button size="sm" variant="ghost" className="text-warning" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
-                Submit for Approval
-              </Button>
-            )}
-            {row.status === "Pending" && (
-              <Button size="sm" variant="ghost" className="text-success" onClick={() => handleApprove(row.id)}>
-                Approve PO
-              </Button>
-            )}
-            {row.status === "Approved" && (
-              <Button size="sm" variant="ghost" className="text-primary" onClick={() => handleUpdate(row.id, { status: "Received" })}>
-                Mark as Received
-              </Button>
-            )}
           </ActionMenu>
         )}
       />
