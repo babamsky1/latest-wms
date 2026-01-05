@@ -1,139 +1,203 @@
 /**
  * Adjustments Page - CONDITIONALLY READ-ONLY
- * 
+ *
+ * Refactored to use:
+ * - React Query hooks for data fetching
+ * - Virtualized table for performance
+ * - Feature-based separation of concerns
+ * - TypeScript types from wms.ts
+ *
  * Spec:
  * ✅ Read-only when status is Pending / Done
  * ✅ Columns: Reference #, Adjustment Date, Source Reference, Category (JO, Zero Out, etc), Warehouse, Status, Created By/At, Updated By/At
  */
 
-import { StatCard } from "@/components/dashboard/StatCard";
-import { DevBadge } from "@/components/dev/DevTools";
-import AddModal, { AddField } from "@/components/modals/AddModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import EditModal from "@/components/modals/EditModal";
-import { ActionMenu } from "@/components/table/ActionMenu";
-import { ColumnDef, DataTable } from "@/components/table/DataTable";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AdjustmentRecord, useWms } from "@/hooks/useWms";
-import { CheckCircle2, Clock, Scale } from "lucide-react";
+import React, { useMemo } from 'react';
+import { ColumnDef } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { VirtualizedTable, createTextColumn, createDateColumn, createActionsColumn } from '@/components/tables/VirtualizedTable';
+import { useAdjustments, usePendingAdjustments, useCreateAdjustment, useApproveAdjustment, useRejectAdjustment } from '@/hooks/stock-management/useAdjustments';
+import { useStockItems } from '@/hooks/stock-management/useStock';
+import { Adjustment } from '@/types/wms';
+import { CheckCircle2, Clock, Scale, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
+/**
+ * Adjustments Page Component
+ * Pure view component that uses hooks for data and business logic
+ */
 export default function Adjustments() {
-  const { adjustments, addAdjustment, updateAdjustment, deleteAdjustment, warehouses, items } = useWms();
+  // Fetch adjustments data using React Query hooks
+  const { data: adjustmentsResponse, isLoading, error } = useAdjustments({
+    page: 1,
+    limit: 100, // Load more for virtualized table
+  });
+
+  // Fetch pending adjustments separately for approval workflow
+  const { data: pendingAdjustments } = usePendingAdjustments();
+
+  // Fetch stock items for reference
+  const { data: stockItems } = useStockItems({ limit: 1000 });
+
+  // Mutation hooks
+  const createAdjustmentMutation = useCreateAdjustment();
+  const approveAdjustmentMutation = useApproveAdjustment();
+  const rejectAdjustmentMutation = useRejectAdjustment();
 
   const categories = ["For JO", "For Zero Out", "Sample and Retention", "Wrong Encode"];
-  const statuses = ["Open", "Pending", "Done"];
 
-  const addFields: AddField<AdjustmentRecord>[] = [
-    { label: "PSC (Item)", name: "psc", type: "datalist", options: items.map(i => ({ value: i.psc, label: `${i.psc} - ${i.shortDescription}` })), required: true },
-    { label: "Category", name: "category", type: "select", options: categories.map(c => ({ value: c, label: c })), required: true },
-    { label: "Warehouse", name: "warehouse", type: "select", options: warehouses.map(w => ({ value: w.name, label: w.name })), required: true },
-    { label: "Adjustment Date", name: "adjustmentDate", type: "date", required: true },
-  ];
+  // Handle adjustment approval
+  const handleApproveAdjustment = async (adjustmentId: string) => {
+    try {
+      await approveAdjustmentMutation.mutateAsync(adjustmentId);
+      toast.success('Adjustment approved successfully');
+    } catch (error) {
+      toast.error('Failed to approve adjustment');
+    }
+  };
 
-  const columns: ColumnDef<AdjustmentRecord>[] = [
-    {
-      key: "referenceNo",
-      label: "Reference #",
-      className: "font-mono font-bold",
-      render: (row) => (
-        <div className="flex items-center">
-          {row.referenceNo}
-          {row.isTestData && <DevBadge />}
+  // Handle adjustment rejection
+  const handleRejectAdjustment = async (adjustmentId: string) => {
+    try {
+      await rejectAdjustmentMutation.mutateAsync({ id: adjustmentId, reason: 'Rejected by user' });
+      toast.success('Adjustment rejected');
+    } catch (error) {
+      toast.error('Failed to reject adjustment');
+    }
+  };
+
+  // Define table columns using the new column helpers
+  const columns = useMemo<ColumnDef<Adjustment>[]>(
+    () => [
+      createTextColumn('referenceNo', 'Reference #', { size: 140 }),
+      createTextColumn('stockItemId', 'PSC', { size: 120 }),
+      createDateColumn('performedAt', 'Adjustment Date', { size: 130 }),
+      createTextColumn('reference', 'Source Ref', { size: 120 }),
+      createTextColumn('reason', 'Category', { size: 140 }),
+      createTextColumn('warehouseId', 'Warehouse', { size: 120 }),
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        size: 120,
+        cell: ({ getValue }) => {
+          const status = String(getValue());
+          const variants = {
+            pending: 'default',
+            approved: 'secondary',
+            rejected: 'destructive',
+          } as const;
+
+          return (
+            <Badge variant={variants[status as keyof typeof variants] || 'outline'}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Badge>
+          );
+        },
+      },
+      createTextColumn('performedBy', 'Created By', { size: 120 }),
+      createActionsColumn('Actions', (adjustment) => (
+        <div className="flex gap-2">
+          {adjustment.status === 'pending' && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleApproveAdjustment(adjustment.id)}
+                disabled={approveAdjustmentMutation.isPending}
+                className="text-green-600 hover:text-green-700"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRejectAdjustment(adjustment.id)}
+                disabled={rejectAdjustmentMutation.isPending}
+                className="text-red-600 hover:text-red-700"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
-      )
-    },
-    { key: "psc", label: "PSC", className: "font-mono font-bold" },
-    { key: "adjustmentDate", label: "Adjustment Date" },
-    { key: "sourceReference", label: "Source Ref", className: "font-mono" },
-    { key: "category", label: "Category" },
-    { key: "warehouse", label: "Warehouse" },
-    {
-      key: "status",
-      label: "Status",
-      render: (row) => {
-        const variants: Record<string, string> = {
-          "Open": "status-pending",
-          "Pending": "status-warning",
-          "Done": "status-active"
-        };
-        return <span className={`status-badge ${variants[row.status]}`}>{row.status}</span>;
-      }
-    },
-    { key: "createdBy", label: "Created By", className: "hidden xl:table-cell text-sm text-muted-foreground" },
-    { key: "createdAt", label: "Created At", className: "hidden xl:table-cell text-sm text-muted-foreground" }
-  ];
+      )),
+    ],
+    [approveAdjustmentMutation.isPending, rejectAdjustmentMutation.isPending]
+  );
 
-  const handleUpdate = (id: string, data: Partial<AdjustmentRecord>) => {
-    updateAdjustment(id, { ...data, updatedAt: new Date().toLocaleString(), updatedBy: "admin" });
-  };
+  // Handle loading and error states
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-destructive">Error Loading Adjustments</h2>
+          <p className="text-muted-foreground">Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleDelete = (id: string) => {
-    deleteAdjustment(id);
-  };
+  const adjustments = adjustmentsResponse?.data || [];
+  const pendingCount = pendingAdjustments?.length || 0;
+  const completedCount = adjustments.filter(a => a.status === 'approved').length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Inventory Adjustments</h1>
-          <p className="page-description">Stock corrections and reconciliations</p>
-        </div>
-        <AddModal<AdjustmentRecord>
-          title="New Adjustment"
-          fields={addFields}
-          onSubmit={(data) => {
-            const newAdj: AdjustmentRecord = {
-              ...data as AdjustmentRecord,
-              id: Date.now().toString(),
-              referenceNo: `ADJ-${String(adjustments.length + 1).padStart(3, "0")}`,
-              status: "Open",
-              createdBy: "admin",
-              createdAt: new Date().toLocaleString(),
-              updatedBy: "admin",
-              updatedAt: new Date().toLocaleString(),
-            };
-            addAdjustment(newAdj);
-          }}
-          triggerLabel="New Adjustment"
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Inventory Adjustments</h1>
+        <p className="text-muted-foreground">
+          Stock corrections and reconciliations with approval workflow
+        </p>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          label="Total Adjustments"
+          value={adjustments.length}
+          icon={Scale}
+          variant="primary"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Pending Approval"
+          value={pendingCount}
+          icon={Clock}
+          variant="warning"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Completed"
+          value={completedCount}
+          icon={CheckCircle2}
+          variant="success"
+          loading={isLoading}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Total Adjustments" value={adjustments.length} icon={Scale} variant="primary" />
-        <StatCard label="Pending Approval" value={adjustments.filter(a => a.status === 'Pending').length} icon={Clock} variant="warning" />
-        <StatCard label="Completed" value={adjustments.filter(a => a.status === 'Done').length} icon={CheckCircle2} variant="success" />
-      </div>
-
-      <DataTable
+      {/* Virtualized Table */}
+      <VirtualizedTable
         data={adjustments}
         columns={columns}
-        searchPlaceholder="Search adjustments..."
-        actions={(row) => {
-          const isLocked = row.status === "Pending" || row.status === "Done";
-          if (isLocked) return <Badge variant="secondary">STATUS LOCKED</Badge>;
-
-          return (
-            <ActionMenu>
-              <EditModal<AdjustmentRecord>
-                title="Edit Adjustment"
-                data={row}
-                fields={addFields as any}
-                onSubmit={(data) => handleUpdate(row.id, data)}
-                triggerLabel="Edit"
-              />
-              <DeleteModal
-                title="Delete Adjustment"
-                onSubmit={() => handleDelete(row.id)}
-                triggerLabel="Delete"
-              />
-              <Button size="sm" variant="ghost" className="text-success" onClick={() => handleUpdate(row.id, { status: "Pending" })}>
-                Post
-              </Button>
-            </ActionMenu>
-          );
-        }}
+        height={600}
+        loading={isLoading}
+        filterPlaceholder="Search adjustments by reference, PSC, or reason..."
+        emptyMessage="No adjustments found."
       />
+
+      {/* Additional Info */}
+      <div className="text-sm text-muted-foreground">
+        Showing {adjustments.length} adjustments
+        {adjustmentsResponse && ` of ${adjustmentsResponse.total} total`}
+        {pendingCount > 0 && (
+          <span className="ml-4 text-amber-600">
+            • {pendingCount} pending approval
+          </span>
+        )}
+      </div>
     </div>
   );
 }

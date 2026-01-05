@@ -26,6 +26,7 @@ export interface AddField<T> {
   validation?: (value: unknown) => string | null;
   helperText?: string;
   fullWidth?: boolean;
+  onChange?: (value: unknown, formData: Partial<T>, setFormData: (data: Partial<T>) => void) => void;
 }
 
 interface FormModalProps<T> {
@@ -126,7 +127,14 @@ const AddModal = <T extends object>({
     const finalValue =
       typeof value === "number" && value < 0 ? 0 : value;
 
-    setFormData((prev) => ({ ...prev, [name]: finalValue }));
+    const newFormData = { ...formData, [name]: finalValue };
+    setFormData(newFormData);
+
+    // Find the field and call its onChange callback if it exists
+    const field = fields.find(f => f.name === name);
+    if (field?.onChange) {
+      field.onChange(finalValue, newFormData, setFormData);
+    }
 
     if (errors[String(name)]) {
       setErrors((prev) => {

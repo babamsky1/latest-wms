@@ -1,66 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { AuthContext } from '@/context/AuthContext';
 import { auditTrail } from '@/lib/AuditTrail';
-
-export interface User {
-  id: string;
-  employeeId?: string;
-  fullName: string;
-  email: string;
-  phone?: string;
-  role: 'admin' | 'warehouse_manager' | 'operator' | 'viewer' | 'accountant';
-  assignedWarehouseId?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  lastLogin?: string;
-  avatar?: string;
-  permissions: string[];
-}
-
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  hasPermission: (permission: string) => boolean;
-  hasRole: (role: User['role']) => boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for demonstration - replace with real authentication
-const MOCK_USERS: Record<string, User> = {
-  'admin@wms.com': {
-    id: '1',
-    employeeId: 'EMP001',
-    fullName: 'System Administrator',
-    email: 'admin@wms.com',
-    phone: '+1234567890',
-    role: 'admin',
-    status: 'active',
-    permissions: ['*'], // All permissions
-  },
-  'manager@wms.com': {
-    id: '2',
-    employeeId: 'EMP002',
-    fullName: 'Warehouse Manager',
-    email: 'manager@wms.com',
-    role: 'warehouse_manager',
-    assignedWarehouseId: 'WH-MAIN',
-    status: 'active',
-    permissions: ['read:*', 'write:inventory', 'write:orders', 'approve:transfers'],
-  },
-  'operator@wms.com': {
-    id: '3',
-    employeeId: 'EMP003',
-    fullName: 'Warehouse Operator',
-    email: 'operator@wms.com',
-    role: 'operator',
-    assignedWarehouseId: 'WH-MAIN',
-    status: 'active',
-    permissions: ['read:inventory', 'write:orders', 'write:assignments'],
-  },
-};
+import { AuthContextType, MOCK_USERS, User } from '@/lib/auth';
+import React, { ReactNode, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -142,8 +84,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const intendedPath = location.state?.from?.pathname || '/dashboard';
       navigate(intendedPath, { replace: true });
 
-    } catch (error) {
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -188,99 +128,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
-// Custom router hook with auth integration
-export const useRouter = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
-
-  const navigateTo = (path: string, options?: { replace?: boolean; state?: any }) => {
-    if (!isAuthenticated && !['/', '/login'].includes(path)) {
-      navigate('/login', {
-        replace: true,
-        state: { from: location }
-      });
-      return;
-    }
-    navigate(path, options);
-  };
-
-  const goBack = () => {
-    navigate(-1);
-  };
-
-  const goHome = () => {
-    navigate('/dashboard', { replace: true });
-  };
-
-  return {
-    navigate: navigateTo,
-    goBack,
-    goHome,
-    currentPath: location.pathname,
-    searchParams: new URLSearchParams(location.search),
-    location,
-  };
-};
-
-// Route guard component
-export const ProtectedRoute: React.FC<{
-  children: ReactNode;
-  requiredRole?: User['role'];
-  requiredPermission?: string;
-  fallback?: ReactNode;
-}> = ({ children, requiredRole, requiredPermission, fallback }) => {
-  const { user, hasRole, hasPermission, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        navigate('/login', { replace: true });
-        return;
-      }
-
-      if (requiredRole && !hasRole(requiredRole)) {
-        console.warn(`Access denied: Required role ${requiredRole}, user has ${user.role}`);
-        if (fallback) return;
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-
-      if (requiredPermission && !hasPermission(requiredPermission)) {
-        console.warn(`Access denied: Required permission ${requiredPermission}`);
-        if (fallback) return;
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-    }
-  }, [user, requiredRole, requiredPermission, hasRole, hasPermission, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  if (requiredRole && !hasRole(requiredRole)) {
-    return fallback || null;
-  }
-
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return fallback || null;
-  }
-
-  return <>{children}</>;
-};

@@ -18,7 +18,7 @@ import { ReactNode, useEffect, useState } from "react";
 export interface EditField<T> {
   label: string;
   name: keyof T;
-  type?: "text" | "number" | "email" | "password" | "select" | "textarea";
+  type?: "text" | "number" | "email" | "password" | "date" | "select" | "textarea";
   placeholder?: string;
   disabled?: boolean;
   options?: { value: string; label: string }[];
@@ -26,6 +26,7 @@ export interface EditField<T> {
   validation?: (value: unknown) => string | null;
   helperText?: string;
   fullWidth?: boolean;
+  onChange?: (value: unknown, formData: Partial<T>, setFormData: (data: Partial<T>) => void) => void;
 }
 
 interface EditModalProps<T> {
@@ -116,7 +117,14 @@ const EditModal = <T extends object>({
     const finalValue =
       typeof value === "number" && value < 0 ? 0 : value;
 
-    setFormData((prev) => ({ ...prev, [name]: finalValue }));
+    const newFormData = { ...formData, [name]: finalValue };
+    setFormData(newFormData);
+
+    // Find the field and call its onChange callback if it exists
+    const field = fields.find(f => f.name === name);
+    if (field?.onChange) {
+      field.onChange(finalValue, newFormData, setFormData);
+    }
 
     if (errors[String(name)]) {
       setErrors((prev) => {

@@ -1,27 +1,27 @@
+import { useAuth } from "@/hooks/useAuth";
 import { auditTrail } from "@/lib/AuditTrail";
 import { autoComputation } from "@/lib/AutoComputation";
 import { globalEventEmitter, WMSEvents } from "@/lib/EventEmitter";
 import { stockLedger } from "@/lib/StockLedger";
 import { handleValidationError, validationService } from "@/lib/Validation";
-import { useAuth } from "@/providers/AuthProvider";
 import {
-    AdjustmentRecord,
-    BarcoderRecord,
-    CheckerRecord,
-    CustomerMasterRecord,
-    CustomerReturnRecord,
-    DeliveryRecord,
-    ItemMasterRecord,
-    OrderMonitorRecord,
-    PickerRecord,
-    PurchaseOrderRecord,
-    STORAGE_KEYS,
-    SupplierRecord,
-    TaggerRecord,
-    TransferAssignmentRecord,
-    TransferRecord,
-    WarehouseMasterRecord,
-    WithdrawalRecord
+  AdjustmentRecord,
+  BarcoderRecord,
+  CheckerRecord,
+  CustomerMasterRecord,
+  CustomerReturnRecord,
+  DeliveryRecord,
+  ItemMasterRecord,
+  OrderMonitorRecord,
+  PickerRecord,
+  PurchaseOrderRecord,
+  STORAGE_KEYS,
+  SupplierRecord,
+  TaggerRecord,
+  TransferAssignmentRecord,
+  TransferRecord,
+  WarehouseMasterRecord,
+  WithdrawalRecord
 } from "@/types";
 import { ReactNode, useEffect, useReducer } from "react";
 import { WmsContext } from "./WmsContextType";
@@ -976,17 +976,17 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       // Apply auto computations (will calculate totalAmount from quantity * unitPrice)
       const computedPO = autoComputation.applyComputations('purchase_order', po);
 
-      // Add audit fields
+      // Add audit fields only if not already set (preserve existing values from component)
       const poWithAudit = {
         ...computedPO,
-        createdBy: getCurrentUserId(),
-        createdAt: new Date().toISOString(),
-        updatedBy: getCurrentUserId(),
-        updatedAt: new Date().toISOString(),
+        createdBy: computedPO.createdBy || getCurrentUserId(),
+        createdAt: computedPO.createdAt || new Date().toISOString(),
+        updatedBy: computedPO.updatedBy || getCurrentUserId(),
+        updatedAt: computedPO.updatedAt || new Date().toISOString(),
         // Set approval fields if status is Approved
         ...(computedPO.status === 'Approved' && {
-          approvedBy: getCurrentUserId(),
-          approvedAt: new Date().toISOString()
+          approvedBy: computedPO.approvedBy || getCurrentUserId(),
+          approvedAt: computedPO.approvedAt || new Date().toISOString()
         })
       };
 
@@ -1025,8 +1025,11 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(`Purchase order ${id} not found`);
       }
 
-      // Validate the update data
-      const validation = validationService.validatePurchaseOrder(data);
+      // Merge existing data with update data for validation
+      const mergedData = { ...existingPO, ...data };
+
+      // Validate the merged data
+      const validation = validationService.validatePurchaseOrder(mergedData);
       if (!validation.isValid) {
         throw validation.errors[0];
       }
@@ -1037,14 +1040,14 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       // Always set updated timestamp on edit
       const updateData = {
         ...computedData,
-        updatedAt: new Date().toISOString(),
-        updatedBy: getCurrentUserId()
+        updatedAt: computedData.updatedAt || new Date().toISOString(),
+        updatedBy: computedData.updatedBy || getCurrentUserName()
       };
 
       // Set approval fields if status is changing to Approved
       if (computedData.status === 'Approved' && existingPO.status !== 'Approved') {
-        updateData.approvedBy = 'getCurrentUserId()';
-        updateData.approvedAt = new Date().toISOString();
+        updateData.approvedBy = computedData.approvedBy || getCurrentUserName();
+        updateData.approvedAt = computedData.approvedAt || new Date().toISOString();
       }
 
       dispatch({ type: 'UPDATE_PURCHASE_ORDER', payload: { id, data: updateData } });
@@ -1297,7 +1300,7 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
           'Open': ['Pending', 'For Approval', 'Done'],
           'Pending': ['For Approval', 'Done', 'Open'],
           'For Approval': ['Done', 'Open'],
-          'Done': [], // Final state
+          'Done': ['Received'], // Allow Done -> Received transition
           'Received': [] // Final state
         };
 
@@ -1865,7 +1868,9 @@ export const WmsProvider = ({ children }: { children: ReactNode }) => {
       // Warehouse actions
       addWarehouse, updateWarehouse, deleteWarehouse,
       // Customer actions
-      addCustomer, updateCustomer, deleteCustomer
+      addCustomer, updateCustomer, deleteCustomer,
+      // User helpers
+      getCurrentUserName
     }}>
       {children}
     </WmsContext.Provider>

@@ -4,9 +4,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Routes } from "react-router-dom";
 import { DevTools } from "./components/dev/DevTools";
+import { QueryDevTools, DevInfoPanel } from "./components/dev/ReactQueryDevTools";
 import { MainLayout } from "./components/layout/MainLayout";
 import { WmsProvider } from "./context/WmsContext";
-import { AuthProvider, ProtectedRoute } from "./providers/AuthProvider";
+import { AuthProvider } from "./providers/AuthProvider";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Import page components
 import Dashboard from "./pages/Dashboard";
@@ -155,8 +157,10 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
-          {/* DevTools inside WmsProvider but outside MainLayout */}
+          {/* Development Tools */}
           <DevTools />
+          <QueryDevTools />
+          <DevInfoPanel />
         </TooltipProvider>
       </WmsProvider>
     </AuthProvider>

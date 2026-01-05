@@ -17,12 +17,14 @@ import { ActionMenu } from "@/components/table/ActionMenu";
 import { ColumnDef, DataTable } from "@/components/table/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { useWms } from "@/hooks/useWms";
 import { DeliveryRecord } from "@/types";
 import { CheckCircle2, Clock, Truck } from "lucide-react";
 
 export default function SupplierDelivery() {
-  const { deliveries: records, addDelivery, updateDelivery, deleteDelivery, warehouses, suppliers, items, addPicker, addBarcoder, addTagger, addChecker, addTransferAssignment } = useWms();
+  const { deliveries: records, addDelivery, updateDelivery, deleteDelivery, warehouses, suppliers, items, addPicker, addBarcoder, addTagger, addChecker, addTransferAssignment, getCurrentUserName } = useWms();
+  const { user } = useAuth();
 
   // Show all deliveries
   const filteredRecords = records;
@@ -96,11 +98,39 @@ export default function SupplierDelivery() {
       className: "text-sm text-muted-foreground",
       render: (row) => row.status === "Received" ? row.approvedAt || "N/A" : "Pending"
     },
-    { key: "updatedAt", label: "Updated At", className: "hidden xl:table-cell text-sm text-muted-foreground" }
+    {
+      key: "updatedBy",
+      label: "Updated By",
+      className: "text-sm",
+      render: (row) => row.updatedBy || 'N/A'
+    },
+    {
+      key: "updatedAt",
+      label: "Updated At",
+      className: "text-sm text-muted-foreground",
+      render: (row) => {
+        try {
+          return new Date(row.updatedAt).toLocaleString();
+        } catch {
+          return row.updatedAt || 'N/A';
+        }
+      }
+    },
+    {
+      key: "approvedBy",
+      label: "Approved By",
+      className: "text-sm",
+      render: (row) => (
+        <span className={row.approvedBy ? "text-green-600 font-medium" : "text-muted-foreground"}>
+          {row.approvedBy || '-'}
+        </span>
+      )
+    }
   ];
 
   const handleUpdate = (id: string, data: Partial<DeliveryRecord>) => {
-    updateDelivery(id, { ...data, updatedBy: "admin", updatedAt: new Date().toLocaleString() });
+    const currentUser = getCurrentUserName();
+    updateDelivery(id, { ...data, updatedBy: currentUser, updatedAt: new Date().toLocaleString() });
   };
 
 
@@ -112,9 +142,12 @@ export default function SupplierDelivery() {
     }
 
     // Update delivery status to Received
+    const currentUser = getCurrentUserName();
     updateDelivery(id, {
       status: "Received",
-      updatedBy: "admin",
+      approvedBy: currentUser,
+      approvedAt: new Date().toLocaleString(),
+      updatedBy: currentUser,
       updatedAt: new Date().toLocaleString()
     });
 
@@ -146,16 +179,20 @@ export default function SupplierDelivery() {
       deliverySchedule: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
       priorityLevel: "Medium",
       transferType: delivery.transferType,
-      receivedBy: "Warehouse Staff",
+      receivedBy: currentUser,
       status: "No Assignment",
       totalQty: delivery.quantity,
       countedQty: 0,
       whReceiveDate: new Date().toISOString().split('T')[0],
-      approvedBy: "Admin",
+      approvedBy: currentUser,
       plRemarks: `Delivery ${delivery.referenceNo} - ${item.shortDescription}`,
       stockSource: "Supplier Delivery",
       sourceReference: delivery.referenceNo,
       assignedStaff: undefined,
+      createdBy: currentUser,
+      createdAt: new Date().toLocaleString(),
+      updatedBy: currentUser,
+      updatedAt: new Date().toLocaleString(),
     });
   };
 
@@ -170,14 +207,15 @@ export default function SupplierDelivery() {
           title="Create New Delivery"
           fields={addFields}
           onSubmit={(data) => {
+            const currentUser = getCurrentUserName();
             const newDelivery: DeliveryRecord = {
               ...data as DeliveryRecord,
               id: Date.now().toString(),
               referenceNo: `DEL-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
               status: "Open",
-              createdBy: "admin",
+              createdBy: currentUser,
               createdAt: new Date().toLocaleString(),
-              updatedBy: "admin",
+              updatedBy: currentUser,
               updatedAt: new Date().toLocaleString(),
             };
             addDelivery(newDelivery);

@@ -1,446 +1,525 @@
 /**
- * WMS-specific types and interfaces for frontend state management
+ * Core WMS Types - Main business objects
+ * These types represent the core entities in the Warehouse Management System
  */
 
-// --- Local Storage Keys ---
-export const STORAGE_KEYS = {
-  ITEMS: 'wms_items',
-  PURCHASE_ORDERS: 'wms_purchase_orders',
-  ADJUSTMENTS: 'wms_adjustments',
-  WITHDRAWALS: 'wms_withdrawals',
-  CUSTOMER_RETURNS: 'wms_customer_returns',
-  DELIVERIES: 'wms_deliveries',
-  SUPPLIERS: 'wms_suppliers',
-  TRANSFERS: 'wms_transfers',
-  ORDERS: 'wms_orders',
-  PICKERS: 'wms_pickers',
-  BARCODERS: 'wms_barcoders',
-  TAGGERS: 'wms_taggers',
-  CHECKERS: 'wms_checkers',
-  TRANSFER_ASSIGNMENTS: 'wms_transfer_assignments',
-} as const;
+import { z } from 'zod';
 
-// --- Item Master Interfaces ---
-export interface ItemMasterRecord {
+// ============================================================================
+// STOCK MANAGEMENT TYPES
+// ============================================================================
+
+/**
+ * StockItem - Represents an inventory item in the warehouse
+ */
+export interface StockItem {
   id: string;
-  psc: string;
+  psc: string; // Product Stock Code
+  barcode?: string;
   shortDescription: string;
-  longDescription: string;
-  invoiceDescription: string;
-  picklistCode: string;
-  barcode: string;
-  productType: string;
-  igDescription: string;
-  subId: string;
-  brand: "BW" | "KLIK" | "OMG" | "ORO";
-  group: string;
+  longDescription?: string;
+  productType: 'Finished Goods' | 'Raw Materials' | 'Packaging' | 'Equipment';
   category: string;
-  subCategory: string;
-  size: string;
-  color: string;
+  subCategory?: string;
+  brand?: string;
+  size?: string;
+  color?: string;
   isSaleable: boolean;
   cost: number;
-  srp: number;
-  createdBy: string;
+  srp: number; // Suggested Retail Price
+  currentStock: number;
+  minStock?: number;
+  maxStock?: number;
+  location?: string;
+  warehouseId: string;
+  status: 'active' | 'inactive' | 'discontinued';
   createdAt: string;
-  updatedBy: string;
   updatedAt: string;
-  isTestData?: boolean;
+  createdBy: string;
+  updatedBy: string;
 }
 
-export interface PurchaseOrderRecord {
+/**
+ * Adjustment - Stock quantity adjustments
+ */
+export interface Adjustment {
+  id: string;
+  stockItemId: string;
+  adjustmentType: 'increase' | 'decrease';
+  quantity: number;
+  reason: 'damaged' | 'expired' | 'theft' | 'correction' | 'transfer' | 'other';
+  notes?: string;
+  reference?: string;
+  warehouseId: string;
+  performedBy: string;
+  performedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+/**
+ * Withdrawal - Stock withdrawals for orders/usage
+ */
+export interface Withdrawal {
+  id: string;
+  stockItemId: string;
+  quantity: number;
+  reason: 'order' | 'transfer' | 'damaged' | 'expired' | 'sample' | 'other';
+  reference?: string;
+  warehouseId: string;
+  destination?: string;
+  performedBy: string;
+  performedAt: string;
+}
+
+/**
+ * Transfer - Stock transfers between locations/warehouses
+ */
+export interface Transfer {
+  id: string;
+  stockItemId: string;
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  fromLocation?: string;
+  toLocation?: string;
+  quantity: number;
+  reason: 'replenishment' | 'optimization' | 'emergency' | 'other';
+  status: 'pending' | 'approved' | 'in_transit' | 'completed' | 'cancelled';
+  reference?: string;
+  requestedBy: string;
+  requestedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  completedBy?: string;
+  completedAt?: string;
+}
+
+// ============================================================================
+// SUPPLIER MANAGEMENT TYPES
+// ============================================================================
+
+/**
+ * Supplier - Vendor information
+ */
+export interface Supplier {
+  id: string;
+  code: string;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  address: string;
+  city?: string;
+  country?: string;
+  taxId?: string;
+  paymentTerms?: string;
+  leadTimeDays?: number;
+  minimumOrderValue?: number;
+  rating?: number; // 1-5 stars
+  status: 'active' | 'inactive' | 'blocked';
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+/**
+ * PurchaseOrder - Purchase orders from suppliers
+ */
+export interface PurchaseOrder {
   id: string;
   poNumber: string;
+  supplierId: string;
   orderDate: string;
-  supplierName: string;
-  itemCode: string;
+  expectedDate: string;
+  status: 'draft' | 'pending' | 'approved' | 'ordered' | 'partial' | 'received' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  items: PurchaseOrderItem[];
+  totalAmount: number;
+  notes?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+/**
+ * PurchaseOrderItem - Individual items in a purchase order
+ */
+export interface PurchaseOrderItem {
+  id: string;
+  purchaseOrderId: string;
+  stockItemId: string;
   quantity: number;
   unitPrice: number;
   totalAmount: number;
-  status: "Draft" | "Pending" | "Approved" | "Received";
-  priority: "Low" | "Medium" | "High";
-  expectedDate?: string;
-  approvedBy?: string;
-  approvedAt?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
+  receivedQuantity: number;
+  status: 'pending' | 'partial' | 'received';
 }
 
-export interface AdjustmentRecord {
+/**
+ * SupplierDelivery - Goods received from suppliers
+ */
+export interface SupplierDelivery {
   id: string;
-  psc: string;
   referenceNo: string;
-  adjustmentDate: string;
-  sourceReference: string;
-  category: "For JO" | "For Zero Out" | "Sample and Retention" | "Wrong Encode";
-  warehouse: string;
-  status: "Open" | "Pending" | "Done";
-  createdBy: string;
+  purchaseOrderId: string;
+  supplierId: string;
+  deliveryDate: string;
+  items: SupplierDeliveryItem[];
+  status: 'open' | 'receiving' | 'partial' | 'completed' | 'cancelled';
+  packingNo?: string;
+  containerNo?: string;
+  transferType: 'local' | 'international';
+  receivedBy?: string;
+  inspectedBy?: string;
+  notes?: string;
   createdAt: string;
-  updatedBy: string;
   updatedAt: string;
-  isTestData?: boolean;
+  createdBy: string;
+  updatedBy: string;
 }
 
-export interface WithdrawalRecord {
+// ============================================================================
+// ORDER COMPLETION TYPES
+// ============================================================================
+
+/**
+ * Order - Customer orders to be fulfilled
+ */
+export interface Order {
   id: string;
-  psc: string;
-  referenceNo: string;
-  transferDate: string;
-  category: "Acetone" | "Industrial" | "Consumables";
-  warehouse: string;
-  status: "Open" | "Pending" | "Done";
-  createdBy: string;
+  orderNumber: string;
+  customerId: string;
+  orderDate: string;
+  requiredDate: string;
+  status: 'pending' | 'picking' | 'packing' | 'shipping' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  items: OrderItem[];
+  totalAmount: number;
+  shippingAddress: string;
+  notes?: string;
   createdAt: string;
-  updatedBy: string;
   updatedAt: string;
-  isTestData?: boolean;
+  createdBy: string;
+  updatedBy: string;
 }
 
-// New Customer Return Record interface
-export interface CustomerReturnRecord {
+/**
+ * OrderItem - Individual items in an order
+ */
+export interface OrderItem {
   id: string;
-  psc: string;
-  referenceNo: string;
-  customerCode: string;
-  customerName: string;
-  company: string;
-  warehouse: string;
-  status: "Done" | "Open" | "For Segregation";
-  amountTotal: number;
-  reason: ("OVERSTOCK" | "DAMAGED" | "EXPIRED" | "BAD ORDER" | "PULL OUT")[];
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-export interface DeliveryRecord {
-  id: string;
-  referenceNo: string;
-  poNumber?: string; // Original PO number for linking assignments
-  transferDate: string;
-  supplierCode: string;
-  itemCode: string;
+  orderId: string;
+  stockItemId: string;
   quantity: number;
-  packingNo: string;
-  containerNo: string;
-  transferType: "Local" | "International";
-  status: "Open" | "Pending" | "Done" | "Received" | "For Approval";
-  warehouse: string;
-  approvedBy?: string;
-  approvedAt?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
+  unitPrice: number;
+  totalAmount: number;
+  pickedQuantity: number;
+  packedQuantity: number;
+  shippedQuantity: number;
 }
 
-export interface SupplierRecord {
+/**
+ * PickerAssignment - Assignment of items to pickers
+ */
+export interface PickerAssignment {
   id: string;
-  supplierCode: string;
-  supplierName: string;
-  companyName: string;
-  supplierType: "Local" | "International";
-  company: string;
-  status: "Active" | "Inactive";
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
+  orderId: string;
+  pickerId: string;
+  assignedItems: PickerAssignmentItem[];
+  status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  assignedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  notes?: string;
 }
 
-export interface WarehouseMasterRecord {
+/**
+ * PickerAssignmentItem - Specific items assigned to a picker
+ */
+export interface PickerAssignmentItem {
+  id: string;
+  pickerAssignmentId: string;
+  stockItemId: string;
+  location: string;
+  requiredQuantity: number;
+  pickedQuantity: number;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+/**
+ * BarcoderAssignment - Assignment for barcode labeling
+ */
+export interface BarcoderAssignment {
+  id: string;
+  orderId: string;
+  barcoderId: string;
+  assignedItems: BarcoderAssignmentItem[];
+  status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  assignedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+/**
+ * BarcoderAssignmentItem - Items for barcode processing
+ */
+export interface BarcoderAssignmentItem {
+  id: string;
+  barcoderAssignmentId: string;
+  stockItemId: string;
+  quantity: number;
+  barcodeStatus: 'pending' | 'printed' | 'verified';
+}
+
+// ============================================================================
+// CUSTOMER RETURNS TYPES
+// ============================================================================
+
+/**
+ * CustomerReturn - Returns from customers
+ */
+export interface CustomerReturn {
+  id: string;
+  returnNumber: string;
+  customerId: string;
+  orderId?: string;
+  returnDate: string;
+  status: 'open' | 'receiving' | 'inspection' | 'processing' | 'completed' | 'cancelled';
+  items: CustomerReturnItem[];
+  totalAmount: number;
+  reason: string[];
+  notes?: string;
+  processedBy?: string;
+  inspectedBy?: string;
+  approvedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+/**
+ * CustomerReturnItem - Individual items in a customer return
+ */
+export interface CustomerReturnItem {
+  id: string;
+  customerReturnId: string;
+  stockItemId: string;
+  quantity: number;
+  condition: 'new' | 'used' | 'damaged' | 'defective';
+  reason: string;
+  disposition: 'restock' | 'repair' | 'scrap' | 'return_to_supplier';
+  unitPrice: number;
+  totalAmount: number;
+}
+
+// ============================================================================
+// ORDER MONITORING TYPES
+// ============================================================================
+
+/**
+ * OrderMonitoring - Real-time order tracking
+ */
+export interface OrderMonitoring {
+  id: string;
+  orderId: string;
+  currentStage: 'order_received' | 'picking' | 'packing' | 'quality_check' | 'shipping' | 'delivered';
+  stageStartTime: string;
+  estimatedCompletionTime?: string;
+  assignedStaff?: string;
+  progress: number; // 0-100
+  issues?: string[];
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  slaStatus: 'on_track' | 'at_risk' | 'delayed';
+  lastUpdated: string;
+}
+
+// ============================================================================
+// WAREHOUSE & LOCATION TYPES
+// ============================================================================
+
+/**
+ * Warehouse - Physical warehouse locations
+ */
+export interface Warehouse {
   id: string;
   code: string;
   name: string;
-  type: "Main" | "Branch" | "Production" | "Third Party";
+  type: 'main' | 'branch' | 'satellite';
   location: string;
   capacity?: number;
-  status: "Active" | "Inactive";
-  createdBy: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  manager?: string;
+  contactPhone?: string;
   createdAt: string;
-  updatedBy: string;
   updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }
 
-export interface CustomerMasterRecord {
+/**
+ * Location - Specific storage locations within warehouses
+ */
+export interface Location {
+  id: string;
+  warehouseId: string;
+  zone: 'receiving' | 'storage' | 'picking' | 'shipping' | 'quarantine';
+  aisle?: string;
+  rack: string;
+  bin: string;
+  level?: number;
+  code: string;
+  barcode?: string;
+  capacity?: number;
+  currentUtilization?: number;
+  description?: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+/**
+ * Customer - Customer information for orders and returns
+ */
+export interface Customer {
   id: string;
   code: string;
   name: string;
-  company: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
   address: string;
-  type: "Retail" | "Wholesale" | "Distributor";
-  status: "Active" | "Inactive";
-  createdBy: string;
+  city?: string;
+  country?: string;
+  taxId?: string;
+  creditLimit?: number;
+  paymentTerms?: string;
+  status: 'active' | 'inactive' | 'blocked';
   createdAt: string;
-  updatedBy: string;
   updatedAt: string;
-}
-
-export interface TransferItem {
-  id: string;
-  psc: string;
-  quantity: number;
-  unit: string;
-}
-
-export interface TransferRecord {
-  id: string;
-  items: TransferItem[];
-  referenceNo: string;
-  transferDate: string;
-  neededDate: string;
-  sourceWarehouse: string;
-  destinationWarehouse: string;
-  requestedBy: string;
-  status: "Open" | "Approved" | "In Transit" | "Done" | "Cancelled";
-  approvedBy?: string;
-  approvedAt?: string;
   createdBy: string;
-  createdAt: string;
   updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-export interface OrderMonitorRecord {
-  id: string;
-  poNo: string;
-  seriesNo: string;
-  customerName: string;
-  brand: string;
-  pickerStatus: "Done" | "In Progress" | "Pending";
-  barcoderStatus: "Done" | "In Progress" | "Pending";
-  taggerStatus: "Done" | "In Progress" | "Pending";
-  checkerStatus: "Done" | "In Progress" | "Pending";
-  overallStatus: "Shipped" | "Ready" | "Processing" | "Delayed";
-  deliverySchedule: string;
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-export interface PickerRecord {
-  id: string;
-  seriesNo: string;
-  poNo: string;
-  deliveryReference?: string; // Delivery reference number from Supplier Delivery
-  poBrand: string;
-  customerName: string;
-  routeCode: string;
-  dateApproved: string;
-  approvedTime: string;
-  deliverySchedule: string;
-  priorityLevel: "High" | "Medium" | "Low";
-  transferType: string;
-  receivedBy: string;
-  // Status type now allows "No Assignment" for display purposes
-  status: "No Assignment" | "Assigned" | "Picking" | "Picked";
-  totalQty: number; // Required quantity
-  countedQty: number; // Actually counted/picked quantity
-  whReceiveDate: string;
-  approvedBy: string;
-  assignedStaff?: string;
-  plRemarks: string;
-  // Stock source tracking - assignments not limited to supplier deliveries
-  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
-  sourceReference: string; // PO #, Transfer ID, etc.
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-
-export interface BarcoderRecord {
-  id: string;
-  seriesNo: string;
-  poNo: string;
-  deliveryReference?: string; // Delivery reference number from Supplier Delivery
-  poBrand: string;
-  customerName: string;
-  routeCode: string;
-  barcoderName: string;
-  deliverySchedule: string;
-  dateApproved: string;
-  approvedTime: string;
-  priorityLevel: "High" | "Medium" | "Low";
-  transferType: string;
-  approvedBy: string;
-  receivedBy: string;
-  status: "Pending" | "Scanning" | "Scanned";
-  assignedStaff?: string;
-  // Stock source tracking
-  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
-  sourceReference: string;
-  totalQty: number; // Required quantity
-  countedQty: number; // Actually scanned quantity
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-export interface TaggerRecord {
-  id: string;
-  seriesNo: string;
-  poNo: string;
-  deliveryReference?: string; // Delivery reference number from Supplier Delivery
-  poBrand: string;
-  customerName: string;
-  routeCode: string;
-  priorityLevel: "High" | "Medium" | "Low";
-  deliverySchedule: string;
-  dateApproved: string;
-  status: "Pending" | "Tagging" | "Tagged";
-  approvedBy: string;
-  assignedStaff?: string;
-  // Stock source tracking
-  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
-  sourceReference: string;
-  totalQty: number; // Required quantity
-  countedQty: number; // Actually tagged quantity
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-export interface CheckerRecord {
-  id: string;
-  seriesNo: string;
-  poNo: string;
-  deliveryReference?: string; // Delivery reference number from Supplier Delivery
-  customerName: string;
-  status: "Pending" | "Checking" | "Checked";
-  assignedStaff?: string;
-  lastVerified?: string;
-  // Stock source tracking
-  stockSource: "Supplier Delivery" | "Internal Transfer" | "Adjustment" | "Customer Return";
-  sourceReference: string;
-  totalQty: number; // Required quantity
-  countedQty: number; // Actually verified quantity
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
-}
-
-export interface TransferAssignmentRecord {
-  id: string;
-  transferId: string;
-  fromWarehouse: string;
-  toWarehouse: string;
-  driverName: string;
-  assignedStaff?: string;
-  status: "Assigned" | "On Delivery" | "Delivered";
-  createdBy: string;
-  createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  isTestData?: boolean;
 }
 
 // ============================================================================
-// AUDIT TRAIL SYSTEM
+// ZOD SCHEMAS FOR VALIDATION
 // ============================================================================
 
-export interface AuditLogEntry {
-  id: string;
-  userId: string;
-  userName: string;
-  action: 'create' | 'update' | 'delete' | 'view' | 'export' | 'login' | 'logout' | 'approve' | 'reject';
-  entityType: 'item' | 'purchase_order' | 'adjustment' | 'withdrawal' | 'customer_return' | 'delivery' | 'supplier' | 'transfer' | 'order' | 'picker' | 'barcoder' | 'tagger' | 'checker' | 'transfer_assignment' | 'warehouse' | 'customer' | 'stock' | 'reservation';
-  entityId: string;
-  entityName?: string; // Human-readable name
-  changes?: Record<string, any> | any;
-  timestamp: string;
-  ipAddress?: string;
-  userAgent?: string;
-  sessionId?: string;
-  success: boolean;
-  errorMessage?: string;
-  metadata?: Record<string, any>; // Additional context
-  isTestData?: boolean;
-}
+export const StockItemSchema = z.object({
+  id: z.string(),
+  psc: z.string().min(1, "PSC is required"),
+  barcode: z.string().optional(),
+  shortDescription: z.string().min(1, "Short description is required"),
+  longDescription: z.string().optional(),
+  productType: z.enum(['Finished Goods', 'Raw Materials', 'Packaging', 'Equipment']),
+  category: z.string().min(1, "Category is required"),
+  subCategory: z.string().optional(),
+  brand: z.string().optional(),
+  size: z.string().optional(),
+  color: z.string().optional(),
+  isSaleable: z.boolean(),
+  cost: z.number().min(0, "Cost must be non-negative"),
+  srp: z.number().min(0, "SRP must be non-negative"),
+  currentStock: z.number().min(0, "Stock must be non-negative"),
+  minStock: z.number().min(0).optional(),
+  maxStock: z.number().min(0).optional(),
+  location: z.string().optional(),
+  warehouseId: z.string().min(1, "Warehouse is required"),
+  status: z.enum(['active', 'inactive', 'discontinued']),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+});
 
-export interface UserSession {
-  id: string;
-  userId: string;
-  userName: string;
-  loginTime: string;
-  logoutTime?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  isActive: boolean;
-}
+export const SupplierSchema = z.object({
+  id: z.string(),
+  code: z.string().min(1, "Supplier code is required"),
+  name: z.string().min(1, "Supplier name is required"),
+  contactPerson: z.string().min(1, "Contact person is required"),
+  phone: z.string().min(1, "Phone is required"),
+  email: z.string().email("Invalid email format"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  taxId: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  leadTimeDays: z.number().min(0).optional(),
+  minimumOrderValue: z.number().min(0).optional(),
+  rating: z.number().min(1).max(5).optional(),
+  status: z.enum(['active', 'inactive', 'blocked']),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+});
 
-// ============================================================================
-// STOCK LEDGER SYSTEM
-// ============================================================================
+export const OrderSchema = z.object({
+  id: z.string(),
+  orderNumber: z.string().min(1, "Order number is required"),
+  customerId: z.string().min(1, "Customer is required"),
+  orderDate: z.string().min(1, "Order date is required"),
+  requiredDate: z.string().min(1, "Required date is required"),
+  status: z.enum(['pending', 'picking', 'packing', 'shipping', 'completed', 'cancelled']),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  items: z.array(z.object({
+    id: z.string(),
+    orderId: z.string(),
+    stockItemId: z.string(),
+    quantity: z.number().min(1, "Quantity must be at least 1"),
+    unitPrice: z.number().min(0, "Unit price must be non-negative"),
+    totalAmount: z.number().min(0),
+    pickedQuantity: z.number().min(0),
+    packedQuantity: z.number().min(0),
+    shippedQuantity: z.number().min(0),
+  })),
+  totalAmount: z.number().min(0),
+  shippingAddress: z.string().min(1, "Shipping address is required"),
+  notes: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+});
 
-export interface StockLocation {
-  warehouseId: string;
-  locationId?: string; // Specific location within warehouse
-  zone?: string; // receiving, storage, picking, shipping
-  aisle?: string;
-  rack?: string;
-  bin?: string;
-}
+export const CustomerReturnSchema = z.object({
+  id: z.string(),
+  returnNumber: z.string().min(1, "Return number is required"),
+  customerId: z.string().min(1, "Customer is required"),
+  orderId: z.string().optional(),
+  returnDate: z.string().min(1, "Return date is required"),
+  status: z.enum(['open', 'receiving', 'inspection', 'processing', 'completed', 'cancelled']),
+  items: z.array(z.object({
+    id: z.string(),
+    customerReturnId: z.string(),
+    stockItemId: z.string(),
+    quantity: z.number().min(1, "Quantity must be at least 1"),
+    condition: z.enum(['new', 'used', 'damaged', 'defective']),
+    reason: z.string().min(1, "Reason is required"),
+    disposition: z.enum(['restock', 'repair', 'scrap', 'return_to_supplier']),
+    unitPrice: z.number().min(0),
+    totalAmount: z.number().min(0),
+  })),
+  totalAmount: z.number().min(0),
+  reason: z.array(z.string()),
+  notes: z.string().optional(),
+  processedBy: z.string().optional(),
+  inspectedBy: z.string().optional(),
+  approvedBy: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+});
 
-export interface StockLedgerEntry {
-  id: string;
-  productId: string; // PSC code
-  location: StockLocation;
-  transactionType: 'in' | 'out' | 'transfer_in' | 'transfer_out' | 'adjustment' | 'count';
-  referenceType: 'purchase_order' | 'sales_order' | 'transfer' | 'adjustment' | 'physical_count' | 'return';
-  referenceId: string; // ID of the referencing document
-  quantity: number;
-  previousBalance: number;
-  newBalance: number;
-  unitCost?: number;
-  totalCost?: number;
-  lotNumber?: string;
-  expiryDate?: string;
-  performedBy: string; // User who performed the transaction
-  transactionDate: string;
-  notes?: string;
-  isTestData?: boolean;
-}
-
-export interface StockBalance {
-  productId: string;
-  warehouseId: string;
-  locationId?: string;
-  availableQuantity: number;
-  reservedQuantity: number;
-  totalQuantity: number;
-  lastUpdated: string;
-  lastUpdatedBy: string;
-}
-
-export interface StockReservation {
-  id: string;
-  productId: string;
-  location: StockLocation;
-  quantity: number;
-  referenceType: string; // 'order', 'transfer', etc.
-  referenceId: string;
-  reservedBy: string;
-  reservedAt: string;
-  expiresAt?: string;
-  status: 'active' | 'released' | 'expired';
-}
+// Type inference from schemas
+export type StockItemForm = z.infer<typeof StockItemSchema>;
+export type SupplierForm = z.infer<typeof SupplierSchema>;
+export type OrderForm = z.infer<typeof OrderSchema>;
+export type CustomerReturnForm = z.infer<typeof CustomerReturnSchema>;

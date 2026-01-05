@@ -107,6 +107,9 @@ export interface WmsContextType {
   addCustomer: (customer: CustomerMasterRecord) => void;
   updateCustomer: (id: string, data: Partial<CustomerMasterRecord>) => void;
   deleteCustomer: (id: string) => void;
+
+  // User helpers
+  getCurrentUserName: () => string;
 }
 
 export const WmsContext = createContext<WmsContextType | undefined>(undefined);
